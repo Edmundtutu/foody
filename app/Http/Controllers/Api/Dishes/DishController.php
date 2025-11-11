@@ -18,7 +18,6 @@ class DishController extends Controller
     public function __construct(DishService $dishService)
     {
         $this->dishService = $dishService;
-        $this->middleware('auth:sanctum')->except(['index', 'show']);
     }
 
     public function index(Request $request)

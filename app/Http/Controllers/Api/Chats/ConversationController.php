@@ -16,7 +16,6 @@ class ConversationController extends Controller
     public function __construct(ChatService $chatService)
     {
         $this->chatService = $chatService;
-        $this->middleware('auth:sanctum');
     }
 
     public function index()

@@ -17,7 +17,6 @@ class MessageController extends Controller
     public function __construct(ChatService $chatService)
     {
         $this->chatService = $chatService;
-        $this->middleware('auth:sanctum');
     }
 
     public function store(MessageRequest $request, $conversationId)

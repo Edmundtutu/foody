@@ -18,7 +18,6 @@ class RestaurantController extends Controller
     public function __construct(RestaurantService $restaurantService)
     {
         $this->restaurantService = $restaurantService;
-        $this->middleware('auth:sanctum')->except(['index', 'show']);
     }
 
     public function index(Request $request)

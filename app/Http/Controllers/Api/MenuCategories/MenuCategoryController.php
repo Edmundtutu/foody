@@ -18,7 +18,6 @@ class MenuCategoryController extends Controller
     public function __construct(MenuCategoryService $menuCategoryService)
     {
         $this->menuCategoryService = $menuCategoryService;
-        $this->middleware('auth:sanctum')->except(['index', 'show']);
     }
 
     public function index(Request $request)

@@ -18,7 +18,6 @@ class OrderController extends Controller
     public function __construct(OrderService $orderService)
     {
         $this->orderService = $orderService;
-        $this->middleware('auth:sanctum');
     }
 
     public function index(Request $request)
