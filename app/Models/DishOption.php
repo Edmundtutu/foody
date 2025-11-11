@@ -28,4 +28,3 @@ class DishOption extends Model
         return $this->belongsTo(Dish::class);
     }
 }
-

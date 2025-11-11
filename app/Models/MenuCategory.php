@@ -32,4 +32,3 @@ class MenuCategory extends Model
         return $this->hasMany(Dish::class, 'category_id');
     }
 }
-

@@ -29,12 +29,14 @@ class MenuCategoryService
     {
         $category = MenuCategory::findOrFail($id);
         $category->update($data);
+
         return $category->fresh();
     }
 
     public function deleteCategory(string $id)
     {
         $category = MenuCategory::findOrFail($id);
+
         return $category->delete();
     }
 }

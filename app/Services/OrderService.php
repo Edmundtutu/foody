@@ -33,6 +33,7 @@ class OrderService
             }
 
             $order->update(['total' => $total]);
+
             return $order->fresh(['items.dish', 'restaurant']);
         });
     }
@@ -46,6 +47,7 @@ class OrderService
     {
         $order = Order::findOrFail($id);
         $order->update(['status' => $status]);
+
         return $order->fresh();
     }
 

@@ -53,6 +53,7 @@ class ChatService
     {
         $message = Message::findOrFail($messageId);
         $message->update(['read_at' => now()]);
+
         return $message;
     }
 }

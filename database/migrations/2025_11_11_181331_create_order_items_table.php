@@ -21,7 +21,7 @@ return new class extends Migration
             $table->json('options')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('order_id')->references('id')->on('orders');
             $table->foreign('dish_id')->references('id')->on('dishes');
         });

@@ -24,7 +24,7 @@ return new class extends Migration
             $table->json('tags')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('restaurant_id')->references('id')->on('restaurants');
             $table->foreign('category_id')->references('id')->on('menu_categories');
         });

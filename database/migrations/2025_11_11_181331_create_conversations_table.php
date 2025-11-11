@@ -19,7 +19,7 @@ return new class extends Migration
             $table->enum('status', ['active', 'closed', 'archived'])->default('active');
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('order_id')->references('id')->on('orders');
             $table->foreign('customer_id')->references('id')->on('users');
             $table->foreign('restaurant_id')->references('id')->on('restaurants');

@@ -43,4 +43,3 @@ class InventoryNode extends Model
         return $this->hasMany(InventoryNodeEdge::class, 'target_node_id');
     }
 }
-

@@ -19,7 +19,7 @@ return new class extends Migration
             $table->string('label')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            
+
             $table->foreign('restaurant_id')->references('id')->on('restaurants');
             $table->foreign('source_node_id')->references('id')->on('inventory_nodes');
             $table->foreign('target_node_id')->references('id')->on('inventory_nodes');

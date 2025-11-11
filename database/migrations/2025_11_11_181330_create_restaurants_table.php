@@ -25,7 +25,7 @@ return new class extends Migration
             $table->json('config')->nullable();
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('owner_id')->references('id')->on('users');
         });
     }

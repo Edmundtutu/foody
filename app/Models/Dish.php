@@ -61,4 +61,3 @@ class Dish extends Model
         return $query->where('available', true);
     }
 }
-

@@ -37,4 +37,3 @@ class InventoryNodeEdge extends Model
         return $this->belongsTo(InventoryNode::class, 'target_node_id');
     }
 }
-

@@ -20,12 +20,14 @@ class ReviewService
     {
         $review = Review::findOrFail($id);
         $review->update($data);
+
         return $review->fresh();
     }
 
     public function deleteReview(string $id)
     {
         $review = Review::findOrFail($id);
+
         return $review->delete();
     }
 

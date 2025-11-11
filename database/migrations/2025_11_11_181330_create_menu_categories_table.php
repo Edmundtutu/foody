@@ -19,7 +19,7 @@ return new class extends Migration
             $table->integer('display_order')->default(0);
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('restaurant_id')->references('id')->on('restaurants');
         });
     }

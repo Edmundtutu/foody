@@ -54,4 +54,3 @@ class Order extends Model
         return $query->where('status', 'completed');
     }
 }
-

@@ -23,7 +23,7 @@ class DishService
         }
 
         if (isset($filters['name'])) {
-            $query->where('name', 'like', '%' . $filters['name'] . '%');
+            $query->where('name', 'like', '%'.$filters['name'].'%');
         }
 
         return $query->with(['category', 'restaurant', 'options'])->get();
@@ -44,12 +44,14 @@ class DishService
     {
         $dish = Dish::findOrFail($id);
         $dish->update($data);
+
         return $dish->fresh();
     }
 
     public function deleteDish(string $id)
     {
         $dish = Dish::findOrFail($id);
+
         return $dish->delete();
     }
 }

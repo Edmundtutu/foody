@@ -71,4 +71,3 @@ class Restaurant extends Model
         return $query->where('verification_status', 'verified');
     }
 }
-

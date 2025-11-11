@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Restaurant;
-use Illuminate\Database\Eloquent\Collection;
 
 class RestaurantService
 {
@@ -29,12 +28,14 @@ class RestaurantService
     {
         $restaurant = Restaurant::findOrFail($id);
         $restaurant->update($data);
+
         return $restaurant->fresh();
     }
 
     public function deleteRestaurant(string $id)
     {
         $restaurant = Restaurant::findOrFail($id);
+
         return $restaurant->delete();
     }
 
@@ -43,7 +44,7 @@ class RestaurantService
         $query = Restaurant::query();
 
         if (isset($filters['name'])) {
-            $query->where('name', 'like', '%' . $filters['name'] . '%');
+            $query->where('name', 'like', '%'.$filters['name'].'%');
         }
 
         if (isset($filters['verification_status'])) {

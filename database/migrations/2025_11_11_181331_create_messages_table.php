@@ -19,7 +19,7 @@ return new class extends Migration
             $table->text('content')->nullable();
             $table->timestamp('read_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
-            
+
             $table->foreign('conversation_id')->references('id')->on('conversations');
             $table->foreign('sender_id')->references('id')->on('users');
         });

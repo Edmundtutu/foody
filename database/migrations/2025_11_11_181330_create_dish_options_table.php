@@ -19,7 +19,7 @@ return new class extends Migration
             $table->boolean('required')->default(false);
             $table->timestamps();
             $table->softDeletes();
-            
+
             $table->foreign('dish_id')->references('id')->on('dishes');
         });
     }
