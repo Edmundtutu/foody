@@ -19,10 +19,7 @@ class ReviewFactory extends Factory
     {
         return [
             'user_id' => User::factory(),
-            'reviewable_type' => fake()->randomElement([
-                'App\Models\Dish',
-                'App\Models\Restaurant',
-            ]),
+            'reviewable_type' => fake()->randomElement(['dish', 'restaurant']),
             'reviewable_id' => null, // Will be set when creating reviews
             'rating' => fake()->numberBetween(1, 5),
             'comment' => fake()->optional()->sentence(),
@@ -35,7 +32,7 @@ class ReviewFactory extends Factory
     public function forDish($dishId): static
     {
         return $this->state(fn (array $attributes) => [
-            'reviewable_type' => 'App\Models\Dish',
+            'reviewable_type' => 'dish',
             'reviewable_id' => $dishId,
         ]);
     }
@@ -46,7 +43,7 @@ class ReviewFactory extends Factory
     public function forRestaurant($restaurantId): static
     {
         return $this->state(fn (array $attributes) => [
-            'reviewable_type' => 'App\Models\Restaurant',
+            'reviewable_type' => 'restaurant',
             'reviewable_id' => $restaurantId,
         ]);
     }

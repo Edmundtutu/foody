@@ -22,7 +22,7 @@ class OrderFactory extends Factory
             'user_id' => User::factory(),
             'restaurant_id' => Restaurant::factory(),
             'total' => 0, // Will be calculated based on order items
-            'status' => fake()->randomElement(['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled']),
+            'status' => fake()->randomElement(['pending', 'confirmed', 'preparing', 'ready', 'completed', 'cancelled']),
             'notes' => fake()->optional()->sentence(),
         ];
     }
@@ -48,12 +48,12 @@ class OrderFactory extends Factory
     }
 
     /**
-     * Indicate that the order is delivered.
+     * Indicate that the order is completed.
      */
-    public function delivered(): static
+    public function completed(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status' => 'delivered',
+            'status' => 'completed',
         ]);
     }
 }

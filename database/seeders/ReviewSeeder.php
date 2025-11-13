@@ -26,7 +26,7 @@ class ReviewSeeder extends Seeder
             for ($i = 0; $i < $reviewCount; $i++) {
                 Review::factory()->create([
                     'user_id' => $customers->random()->id,
-                    'reviewable_type' => 'App\Models\Restaurant',
+                    'reviewable_type' => 'restaurant',
                     'reviewable_id' => $restaurant->id,
                 ]);
             }
@@ -41,7 +41,7 @@ class ReviewSeeder extends Seeder
             for ($i = 0; $i < $reviewCount; $i++) {
                 Review::factory()->create([
                     'user_id' => $customers->random()->id,
-                    'reviewable_type' => 'App\Models\Dish',
+                    'reviewable_type' => 'dish',
                     'reviewable_id' => $dish->id,
                 ]);
             }

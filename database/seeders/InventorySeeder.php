@@ -36,13 +36,13 @@ class InventorySeeder extends Seeder
 
                 $nodeMap['dish_' . $dish->id] = $dishNode->id;
 
-                // Create inventory nodes for dish options (modifications)
+                // Create inventory nodes for dish options as ingredients
                 $dishOptions = DishOption::where('dish_id', $dish->id)->get();
 
                 foreach ($dishOptions as $option) {
                     $optionNode = InventoryNode::factory()->create([
                         'restaurant_id' => $restaurant->id,
-                        'entity_type' => 'modification',
+                        'entity_type' => 'ingredient',
                         'entity_id' => $option->id,
                         'display_name' => $option->name,
                         'x' => rand(50, 950),
