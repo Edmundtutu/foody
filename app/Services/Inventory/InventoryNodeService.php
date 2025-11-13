@@ -12,10 +12,10 @@ class InventoryNodeService
      */
     public function createNode(array $data): InventoryNode
     {
-        if (!isset($data['id'])) {
+        if (! isset($data['id'])) {
             $data['id'] = Str::ulid();
         }
-        
+
         return InventoryNode::create($data);
     }
 
@@ -34,9 +34,9 @@ class InventoryNodeService
     public function toggleAvailability(string $nodeId): InventoryNode
     {
         $node = InventoryNode::findOrFail($nodeId);
-        $node->available = !$node->available;
+        $node->available = ! $node->available;
         $node->save();
-        
+
         return $node;
     }
 
@@ -50,7 +50,7 @@ class InventoryNodeService
             'x' => $coords['x'] ?? $coords['x_position'] ?? $node->x,
             'y' => $coords['y'] ?? $coords['y_position'] ?? $node->y,
         ]);
-        
+
         return $node;
     }
 

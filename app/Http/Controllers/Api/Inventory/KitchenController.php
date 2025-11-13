@@ -3,7 +3,9 @@
 namespace App\Http\Controllers\Api\Inventory;
 
 use App\Http\Controllers\Controller;
-use App\Services\Inventory\{InventoryGraphService, InventoryNodeService, InventoryEdgeService};
+use App\Services\Inventory\InventoryEdgeService;
+use App\Services\Inventory\InventoryGraphService;
+use App\Services\Inventory\InventoryNodeService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\Request;
 
@@ -15,9 +17,7 @@ class KitchenController extends Controller
         private InventoryGraphService $graphService,
         private InventoryNodeService $nodeService,
         private InventoryEdgeService $edgeService
-    ) {
-        $this->middleware('auth:sanctum');
-    }
+    ) {}
 
     /**
      * Get the complete kitchen graph for a restaurant
@@ -25,6 +25,7 @@ class KitchenController extends Controller
     public function graph(string $restaurantId)
     {
         $graph = $this->graphService->getGraphForRestaurant($restaurantId);
+
         return $this->success($graph, 'Kitchen graph loaded successfully');
     }
 
@@ -34,6 +35,7 @@ class KitchenController extends Controller
     public function showNode(string $nodeId)
     {
         $node = $this->nodeService->getNode($nodeId);
+
         return $this->success($node, 'Node retrieved successfully');
     }
 
@@ -68,6 +70,7 @@ class KitchenController extends Controller
         }
 
         $node = $this->nodeService->createNode($validated);
+
         return $this->success($node, 'Node created successfully', 201);
     }
 
@@ -77,6 +80,7 @@ class KitchenController extends Controller
     public function toggleNode(string $nodeId)
     {
         $node = $this->nodeService->toggleAvailability($nodeId);
+
         return $this->success($node, 'Node availability updated');
     }
 
@@ -93,6 +97,7 @@ class KitchenController extends Controller
         ]);
 
         $node = $this->nodeService->updatePosition($nodeId, $validated);
+
         return $this->success($node, 'Node position updated');
     }
 
@@ -102,6 +107,7 @@ class KitchenController extends Controller
     public function deleteNode(string $nodeId)
     {
         $this->nodeService->deleteNode($nodeId);
+
         return $this->success(null, 'Node deleted successfully');
     }
 
@@ -119,6 +125,7 @@ class KitchenController extends Controller
         ]);
 
         $edge = $this->edgeService->createEdge($validated);
+
         return $this->success($edge, 'Edge created successfully', 201);
     }
 
@@ -128,6 +135,7 @@ class KitchenController extends Controller
     public function deleteEdge(string $edgeId)
     {
         $this->edgeService->deleteEdge($edgeId);
+
         return $this->success(null, 'Edge deleted successfully');
     }
 }

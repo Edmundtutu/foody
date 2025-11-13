@@ -2,7 +2,11 @@
 
 namespace Database\Seeders;
 
-use App\Models\{Restaurant, MenuCategory, InventoryNode, InventoryNodeEdge, Dish};
+use App\Models\Dish;
+use App\Models\InventoryNode;
+use App\Models\InventoryNodeEdge;
+use App\Models\MenuCategory;
+use App\Models\Restaurant;
 use Illuminate\Database\Seeder;
 
 class KitchenGraphSeeder extends Seeder
@@ -14,9 +18,10 @@ class KitchenGraphSeeder extends Seeder
     {
         // Get or create a restaurant
         $restaurant = Restaurant::first();
-        
-        if (!$restaurant) {
+
+        if (! $restaurant) {
             $this->command->info('No restaurants found. Please seed restaurants first.');
+
             return;
         }
 
@@ -32,12 +37,12 @@ class KitchenGraphSeeder extends Seeder
             $category = MenuCategory::firstOrCreate(
                 [
                     'restaurant_id' => $restaurant->id,
-                    'name' => $categoryData['name']
+                    'name' => $categoryData['name'],
                 ],
                 [
                     'color_code' => $categoryData['color_code'],
                     'display_order' => $categoryData['display_order'],
-                    'description' => 'Category for ' . $categoryData['name']
+                    'description' => 'Category for '.$categoryData['name'],
                 ]
             );
             $createdCategories[$categoryData['name']] = $category;
@@ -45,7 +50,7 @@ class KitchenGraphSeeder extends Seeder
 
         // Create inventory nodes
         $nodes = [];
-        
+
         // Main dish nodes
         $mainDishNodes = [
             ['display_name' => 'Luwombo', 'x' => 100, 'y' => 100],
@@ -58,7 +63,7 @@ class KitchenGraphSeeder extends Seeder
                 'restaurant_id' => $restaurant->id,
                 'category_id' => $createdCategories['Main Dishes']->id,
                 'entity_type' => 'dish',
-                'entity_id' => 'dish_' . strtolower($nodeData['display_name']),
+                'entity_id' => 'dish_'.strtolower($nodeData['display_name']),
                 'display_name' => $nodeData['display_name'],
                 'x' => $nodeData['x'],
                 'y' => $nodeData['y'],
@@ -78,7 +83,7 @@ class KitchenGraphSeeder extends Seeder
                 'restaurant_id' => $restaurant->id,
                 'category_id' => $createdCategories['Sides']->id,
                 'entity_type' => 'dish',
-                'entity_id' => 'side_' . strtolower($nodeData['display_name']),
+                'entity_id' => 'side_'.strtolower($nodeData['display_name']),
                 'display_name' => $nodeData['display_name'],
                 'x' => $nodeData['x'],
                 'y' => $nodeData['y'],
@@ -99,7 +104,7 @@ class KitchenGraphSeeder extends Seeder
                 'restaurant_id' => $restaurant->id,
                 'category_id' => $createdCategories['Modifications']->id,
                 'entity_type' => 'modification',
-                'entity_id' => 'mod_' . strtolower(str_replace(' ', '_', $nodeData['display_name'])),
+                'entity_id' => 'mod_'.strtolower(str_replace(' ', '_', $nodeData['display_name'])),
                 'display_name' => $nodeData['display_name'],
                 'x' => $nodeData['x'],
                 'y' => $nodeData['y'],
@@ -129,7 +134,6 @@ class KitchenGraphSeeder extends Seeder
             }
         }
 
-        $this->command->info('Kitchen graph seeded successfully for restaurant: ' . $restaurant->name);
+        $this->command->info('Kitchen graph seeded successfully for restaurant: '.$restaurant->name);
     }
 }
-

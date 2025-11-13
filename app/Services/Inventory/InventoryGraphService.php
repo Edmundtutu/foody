@@ -2,7 +2,10 @@
 
 namespace App\Services\Inventory;
 
-use App\Models\{Restaurant, MenuCategory, InventoryNode, InventoryNodeEdge};
+use App\Models\InventoryNode;
+use App\Models\InventoryNodeEdge;
+use App\Models\MenuCategory;
+use App\Models\Restaurant;
 
 class InventoryGraphService
 {
@@ -14,11 +17,11 @@ class InventoryGraphService
         $categories = MenuCategory::where('restaurant_id', $restaurantId)
             ->orderBy('display_order')
             ->get();
-            
+
         $nodes = InventoryNode::where('restaurant_id', $restaurantId)
             ->with('category')
             ->get();
-            
+
         $edges = InventoryNodeEdge::where('restaurant_id', $restaurantId)
             ->get();
 

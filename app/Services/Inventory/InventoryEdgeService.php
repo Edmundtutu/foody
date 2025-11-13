@@ -12,10 +12,10 @@ class InventoryEdgeService
      */
     public function createEdge(array $data): InventoryNodeEdge
     {
-        if (!isset($data['id'])) {
+        if (! isset($data['id'])) {
             $data['id'] = Str::ulid();
         }
-        
+
         return InventoryNodeEdge::create($data);
     }
 
