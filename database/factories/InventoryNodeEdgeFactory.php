@@ -22,7 +22,7 @@ class InventoryNodeEdgeFactory extends Factory
             'restaurant_id' => Restaurant::factory(),
             'source_node_id' => InventoryNode::factory(),
             'target_node_id' => InventoryNode::factory(),
-            'label' => fake()->optional()->randomElement(['has_option', 'requires', 'includes']),
+            'label' => fake()->optional()->randomElement(['Add-on', 'Served with', 'Prepared at', 'Requires', 'Includes']),
             'metadata' => json_encode([
                 'weight' => fake()->optional()->numberBetween(1, 10),
             ]),

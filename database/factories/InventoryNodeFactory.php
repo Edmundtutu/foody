@@ -20,13 +20,14 @@ class InventoryNodeFactory extends Factory
         return [
             'restaurant_id' => Restaurant::factory(),
             'entity_type' => fake()->randomElement(['ingredient', 'dish', 'station']),
-            'entity_id' => null, // Will be set when creating nodes
+            'entity_id' => null,
             'display_name' => fake()->words(2, true),
-            'x' => fake()->numberBetween(0, 1000),
-            'y' => fake()->numberBetween(0, 1000),
+            'x' => fake()->numberBetween(10, 800),
+            'y' => fake()->numberBetween(10, 600),
             'color_code' => fake()->hexColor(),
+            'available' => fake()->boolean(80),
             'metadata' => json_encode([
-                'description' => fake()->optional()->sentence(),
+                'prep_time' => fake()->randomElement(['5 min', '10 min', '15 min', '20 min']),
             ]),
         ];
     }

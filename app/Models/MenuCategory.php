@@ -16,6 +16,7 @@ class MenuCategory extends Model
         'name',
         'description',
         'display_order',
+        'color_code',
     ];
 
     protected $casts = [
