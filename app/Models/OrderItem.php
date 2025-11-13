@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Models;
+
+use App\Traits\HasUlid;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class OrderItem extends Model
+{
+    use HasUlid, SoftDeletes;
+
+    protected $fillable = [
+        'order_id',
+        'dish_id',
+        'quantity',
+        'unit_price',
+        'total_price',
+        'options',
+    ];
+
+    protected $casts = [
+        'quantity' => 'integer',
+        'unit_price' => 'integer',
+        'total_price' => 'integer',
+        'options' => 'array',
+    ];
+
+    // Relationships
+    public function order()
+    {
+        return $this->belongsTo(Order::class);
+    }
+
+    public function dish()
+    {
+        return $this->belongsTo(Dish::class);
+    }
+}
