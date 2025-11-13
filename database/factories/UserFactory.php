@@ -22,10 +22,16 @@ class UserFactory extends Factory
      */
     public function definition(): array
     {
+        $ugandanNames = [
+            'Mukasa John', 'Namuleme Sarah', 'Kato David', 'Nakato Grace',
+            'Ssemakula Robert', 'Nabirye Faith', 'Wasswa Moses', 'Babirye Mary',
+            'Okello Patrick', 'Akello Betty', 'Mutesi Agnes', 'Kayondo Isaac',
+        ];
+
         return [
-            'name' => fake()->name(),
+            'name' => fake()->randomElement($ugandanNames),
             'email' => fake()->unique()->safeEmail(),
-            'phone' => fake()->unique()->phoneNumber(),
+            'phone' => '+256' . fake()->numerify('7########'),
             'password' => static::$password ??= Hash::make('password'),
             'role' => 'customer',
         ];

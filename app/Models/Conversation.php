@@ -3,11 +3,12 @@
 namespace App\Models;
 
 use App\Traits\HasUlid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Conversation extends Model
 {
-    use HasUlid;
+    use HasFactory, HasUlid;
 
     protected $fillable = [
         'order_id',
