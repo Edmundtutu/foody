@@ -13,18 +13,21 @@ class InventoryNode extends Model
 
     protected $fillable = [
         'restaurant_id',
+        'category_id',
         'entity_type',
         'entity_id',
         'display_name',
         'x',
         'y',
         'color_code',
+        'available',
         'metadata',
     ];
 
     protected $casts = [
         'x' => 'integer',
         'y' => 'integer',
+        'available' => 'boolean',
         'metadata' => 'array',
     ];
 
@@ -32,6 +35,11 @@ class InventoryNode extends Model
     public function restaurant()
     {
         return $this->belongsTo(Restaurant::class);
+    }
+
+    public function category()
+    {
+        return $this->belongsTo(MenuCategory::class, 'category_id');
     }
 
     public function outgoingEdges()

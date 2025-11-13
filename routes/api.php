@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Chats\ConversationController;
 use App\Http\Controllers\Api\Chats\MessageController;
 use App\Http\Controllers\Api\Dishes\DishController;
+use App\Http\Controllers\Api\Inventory\KitchenController;
 use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
 use App\Http\Controllers\Api\Orders\OrderController;
 use App\Http\Controllers\Api\Restaurants\RestaurantController;
@@ -57,5 +58,17 @@ Route::prefix('v1')->group(function () {
         Route::post('/reviews', [ReviewController::class, 'store']);
         Route::put('/reviews/{id}', [ReviewController::class, 'update']);
         Route::delete('/reviews/{id}', [ReviewController::class, 'destroy']);
+    });
+
+    // Kitchen Graph Management (auth required)
+    Route::prefix('kitchen')->middleware(['auth:sanctum'])->group(function () {
+        Route::get('/restaurants/{id}/graph', [KitchenController::class, 'graph']);
+        Route::get('/nodes/{id}', [KitchenController::class, 'showNode']);
+        Route::post('/nodes', [KitchenController::class, 'createNode']);
+        Route::patch('/nodes/{id}/toggle', [KitchenController::class, 'toggleNode']);
+        Route::patch('/nodes/{id}/move', [KitchenController::class, 'moveNode']);
+        Route::delete('/nodes/{id}', [KitchenController::class, 'deleteNode']);
+        Route::post('/edges', [KitchenController::class, 'createEdge']);
+        Route::delete('/edges/{id}', [KitchenController::class, 'deleteEdge']);
     });
 });
