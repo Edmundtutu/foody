@@ -16,14 +16,36 @@ class RestaurantFactory extends Factory
      */
     public function definition(): array
     {
+        $ugandanRestaurants = [
+            'The Pearl Restaurant',
+            'Kampala Kitchen',
+            'Luwombo Palace',
+            'Matoke Express',
+            'Rolex Corner',
+            'Entebbe Grill',
+            'Mbarara Eats',
+            'Jinja Food Hub',
+        ];
+
+        $ugandanLocations = [
+            'Kampala Road, Kampala',
+            'Entebbe Road, Kampala',
+            'Jinja Road, Kampala',
+            'Plot 12, Nakasero',
+            'Bugoloobi, Kampala',
+            'Ntinda Shopping Center',
+            'Kololo, Kampala',
+            'Garden City, Kampala',
+        ];
+
         return [
-            'name' => fake()->company(),
+            'name' => fake()->randomElement($ugandanRestaurants),
             'description' => fake()->sentence(),
-            'phone' => fake()->phoneNumber(),
+            'phone' => '+256' . fake()->numerify('7########'),
             'email' => fake()->unique()->safeEmail(),
-            'address' => fake()->address(),
-            'latitude' => fake()->latitude(),
-            'longitude' => fake()->longitude(),
+            'address' => fake()->randomElement($ugandanLocations),
+            'latitude' => fake()->latitude(0.0, 0.5),
+            'longitude' => fake()->longitude(32.4, 32.8),
             'verification_status' => 'verified',
             'config' => null,
         ];
