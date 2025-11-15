@@ -39,6 +39,7 @@ class RestaurantFactory extends Factory
         ];
 
         return [
+            'owner_id' => \App\Models\User::factory(),
             'name' => fake()->randomElement($ugandanRestaurants),
             'description' => fake()->sentence(),
             'phone' => '+256' . fake()->numerify('7########'),
