@@ -11,11 +11,11 @@ import {
   BarChart3,
   MessageCircle
 } from 'lucide-react';
-import { useAuth } from './AuthContext';
-import { useCart } from './CartContext';
-import { Badge } from './badge';
-import { useUnreadCount } from './useUnreadCount';
-import ErrorBoundary from './ErrorBoundary';
+import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
+import { Badge } from '@/components/ui/badge';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface NavItem {
   name: string;
@@ -29,12 +29,12 @@ const MobileBottomNav: React.FC = () => {
   const { user } = useAuth();
   const { getItemCount } = useCart();
   const location = useLocation();
+  const { totalUnreadCount } = useUnreadCount();
   // Chat functionality removed - will be re-implemented with new system
 
   if (!user) return null;
 
   const cartItemCount = getItemCount();
-  const { totalUnreadCount } = useUnreadCount();
 
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },

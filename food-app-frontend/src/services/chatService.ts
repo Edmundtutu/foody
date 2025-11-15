@@ -31,6 +31,11 @@ export interface CreateMessageData {
   content: string;
 }
 
+export interface SendMessagePayload {
+  conversationId: number;
+  content: string;
+}
+
 export interface ConversationFilters {
   restaurant_id?: string;
 }
@@ -88,6 +93,25 @@ const chatService = {
   async getRestaurantConversations(restaurantId: string): Promise<Conversation[]> {
     return this.getConversations({ restaurant_id: restaurantId });
   },
+};
+
+// Export individual functions for easier use
+export const getConversation = chatService.getConversation.bind(chatService);
+export const getMessages = chatService.getConversation.bind(chatService); // Returns conversation with messages
+export const sendMessage = chatService.createMessage.bind(chatService);
+export const markAsRead = async (conversationId: number): Promise<void> => {
+  // Stub - to be implemented when backend supports it
+  console.log('markAsRead stub called for conversation:', conversationId);
+};
+export const getShopConversations = chatService.getRestaurantConversations.bind(chatService);
+export const getUserConversations = chatService.getConversations.bind(chatService);
+export const startTyping = async (conversationId: number): Promise<void> => {
+  // Stub - to be implemented when backend supports it
+  console.log('startTyping stub called for conversation:', conversationId);
+};
+export const stopTyping = async (conversationId: number): Promise<void> => {
+  // Stub - to be implemented when backend supports it
+  console.log('stopTyping stub called for conversation:', conversationId);
 };
 
 export default chatService;
