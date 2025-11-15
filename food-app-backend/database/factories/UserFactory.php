@@ -1,0 +1,59 @@
+<?php
+
+namespace Database\Factories;
+
+use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\Hash;
+
+/**
+ * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\User>
+ */
+class UserFactory extends Factory
+{
+    /**
+     * The current password being used by the factory.
+     */
+    protected static ?string $password;
+
+    /**
+     * Define the model's default state.
+     *
+     * @return array<string, mixed>
+     */
+    public function definition(): array
+    {
+        $ugandanNames = [
+            'Mukasa John', 'Namuleme Sarah', 'Kato David', 'Nakato Grace',
+            'Ssemakula Robert', 'Nabirye Faith', 'Wasswa Moses', 'Babirye Mary',
+            'Okello Patrick', 'Akello Betty', 'Mutesi Agnes', 'Kayondo Isaac',
+        ];
+
+        return [
+            'name' => fake()->randomElement($ugandanNames),
+            'email' => fake()->unique()->safeEmail(),
+            'phone' => '+256' . fake()->numerify('7########'),
+            'password' => static::$password ??= Hash::make('password'),
+            'role' => 'customer',
+        ];
+    }
+
+    /**
+     * Indicate that the user is a restaurant owner.
+     */
+    public function restaurant(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'restaurant',
+        ]);
+    }
+
+    /**
+     * Indicate that the user is an admin.
+     */
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'role' => 'admin',
+        ]);
+    }
+}
