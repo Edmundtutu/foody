@@ -1,6 +1,5 @@
 import axios, { AxiosError } from 'axios';
 import type { AxiosRequestHeaders } from 'axios';
-
 // Helper function to get token from storage
 const getToken = (): string | null => {
   return localStorage.getItem('auth-token') || localStorage.getItem('auth_token');
@@ -31,7 +30,7 @@ const getCsrfTokenFromCookie = (): string | null => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api',
+  baseURL: import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000',
   headers: {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -61,7 +60,7 @@ api.interceptors.request.use(
     if (needsCsrf && !csrfTokenFetched) {
       try {
         // Use the same api instance to get CSRF cookie
-        await api.get('/sanctum/csrf-cookie');
+        await api.get(`/sanctum/csrf-cookie`);
         csrfTokenFetched = true;
       } catch (error) {
         console.error('Failed to fetch CSRF token:', error);

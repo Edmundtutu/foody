@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface OrderItem {
   id: string;
   order_id: string;
@@ -54,7 +56,7 @@ const orderService = {
    * Get all orders (authenticated)
    */
   async getOrders(filters?: OrderFilters): Promise<Order[]> {
-    const response = await api.get<ApiResponse<Order[]>>('/v1/orders', {
+    const response = await api.get<ApiResponse<Order[]>>(`/${apiVersion}/orders`, {
       params: filters,
     });
     if (response.data.status === 'success' && response.data.data) {
@@ -67,7 +69,7 @@ const orderService = {
    * Get a single order by ID (authenticated)
    */
   async getOrder(orderId: string): Promise<Order> {
-    const response = await api.get<ApiResponse<Order>>(`/v1/orders/${orderId}`);
+    const response = await api.get<ApiResponse<Order>>(`/${apiVersion}/orders/${orderId}`);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -78,7 +80,7 @@ const orderService = {
    * Create a new order (authenticated)
    */
   async createOrder(data: CreateOrderData): Promise<Order> {
-    const response = await api.post<ApiResponse<Order>>('/v1/orders', data);
+    const response = await api.post<ApiResponse<Order>>(`/${apiVersion}/orders`, data);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -93,7 +95,7 @@ const orderService = {
     status: UpdateOrderStatusData['status']
   ): Promise<Order> {
     const response = await api.put<ApiResponse<Order>>(
-      `/v1/orders/${orderId}`,
+      `/${apiVersion}/orders/${orderId}`,
       { status }
     );
     if (response.data.status === 'success' && response.data.data) {

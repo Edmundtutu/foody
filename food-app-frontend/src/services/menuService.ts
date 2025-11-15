@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface MenuCategory {
   id: string;
   restaurant_id: string;
@@ -89,7 +91,7 @@ const menuService = {
    */
   async getMenuCategories(restaurantId: string): Promise<MenuCategory[]> {
     const response = await api.get<ApiResponse<MenuCategory[]>>(
-      '/v1/menu-categories',
+      `/${apiVersion}/menu-categories`,
       {
         params: { restaurant_id: restaurantId },
       }
@@ -105,7 +107,7 @@ const menuService = {
    */
   async getMenuCategory(categoryId: string): Promise<MenuCategory> {
     const response = await api.get<ApiResponse<MenuCategory>>(
-      `/v1/menu-categories/${categoryId}`
+      `/${apiVersion}/menu-categories/${categoryId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -120,7 +122,7 @@ const menuService = {
     data: CreateMenuCategoryData
   ): Promise<MenuCategory> {
     const response = await api.post<ApiResponse<MenuCategory>>(
-      '/v1/menu-categories',
+      `/${apiVersion}/menu-categories`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -137,7 +139,7 @@ const menuService = {
     data: UpdateMenuCategoryData
   ): Promise<MenuCategory> {
     const response = await api.put<ApiResponse<MenuCategory>>(
-      `/v1/menu-categories/${categoryId}`,
+      `/${apiVersion}/menu-categories/${categoryId}`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -151,7 +153,7 @@ const menuService = {
    */
   async deleteMenuCategory(categoryId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/menu-categories/${categoryId}`
+      `/${apiVersion}/menu-categories/${categoryId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete menu category');
@@ -162,7 +164,7 @@ const menuService = {
    * Get all dishes (public)
    */
   async getDishes(filters?: DishFilters): Promise<Dish[]> {
-    const response = await api.get<ApiResponse<Dish[]>>('/v1/dishes', {
+    const response = await api.get<ApiResponse<Dish[]>>(`/${apiVersion}/dishes`, {
       params: filters,
     });
     if (response.data.status === 'success' && response.data.data) {
@@ -175,7 +177,7 @@ const menuService = {
    * Get a single dish by ID (public)
    */
   async getDish(dishId: string): Promise<Dish> {
-    const response = await api.get<ApiResponse<Dish>>(`/v1/dishes/${dishId}`);
+    const response = await api.get<ApiResponse<Dish>>(`/${apiVersion}/dishes/${dishId}`);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -186,7 +188,7 @@ const menuService = {
    * Create a new dish (authenticated)
    */
   async createDish(data: CreateDishData): Promise<Dish> {
-    const response = await api.post<ApiResponse<Dish>>('/v1/dishes', data);
+    const response = await api.post<ApiResponse<Dish>>(`/${apiVersion}/dishes`, data);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -198,7 +200,7 @@ const menuService = {
    */
   async updateDish(dishId: string, data: UpdateDishData): Promise<Dish> {
     const response = await api.put<ApiResponse<Dish>>(
-      `/v1/dishes/${dishId}`,
+      `/${apiVersion}/dishes/${dishId}`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -212,7 +214,7 @@ const menuService = {
    */
   async deleteDish(dishId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/dishes/${dishId}`
+      `/${apiVersion}/dishes/${dishId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete dish');
@@ -224,7 +226,7 @@ const menuService = {
    */
   async getDishOptions(dishId: string): Promise<DishOption[]> {
     const response = await api.get<ApiResponse<DishOption[]>>(
-      '/v1/dish-options',
+      `/${apiVersion}/dish-options`,
       {
         params: { dish_id: dishId },
       }
@@ -240,7 +242,7 @@ const menuService = {
    */
   async getDishOption(optionId: string): Promise<DishOption> {
     const response = await api.get<ApiResponse<DishOption>>(
-      `/v1/dish-options/${optionId}`
+      `/${apiVersion}/dish-options/${optionId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -255,7 +257,7 @@ const menuService = {
     data: CreateDishOptionData
   ): Promise<DishOption> {
     const response = await api.post<ApiResponse<DishOption>>(
-      '/v1/dish-options',
+      `/${apiVersion}/dish-options`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -272,7 +274,7 @@ const menuService = {
     data: UpdateDishOptionData
   ): Promise<DishOption> {
     const response = await api.put<ApiResponse<DishOption>>(
-      `/v1/dish-options/${optionId}`,
+      `/${apiVersion}/dish-options/${optionId}`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -286,7 +288,7 @@ const menuService = {
    */
   async deleteDishOption(optionId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/dish-options/${optionId}`
+      `/${apiVersion}/dish-options/${optionId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete dish option');

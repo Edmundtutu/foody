@@ -1,7 +1,7 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 import type { User, RegisterData } from '@/types/auth';
-
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
 interface AuthResponse {
   user: User;
   token: string;
@@ -9,7 +9,7 @@ interface AuthResponse {
 
 export const authService = {
   async login(email: string, password: string): Promise<AuthResponse> {
-    const response = await api.post<ApiResponse<AuthResponse>>('/v1/login', { email, password });
+    const response = await api.post<ApiResponse<AuthResponse>>(`/${apiVersion}/login`, { email, password });
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -17,7 +17,7 @@ export const authService = {
   },
 
   async register(data: RegisterData): Promise<AuthResponse> {
-    const response = await api.post<ApiResponse<AuthResponse>>('/v1/register', data);
+    const response = await api.post<ApiResponse<AuthResponse>>(`/${apiVersion}/register`, data);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }
@@ -25,11 +25,11 @@ export const authService = {
   },
 
   async logout(): Promise<void> {
-    await api.post('/v1/logout');
+    await api.post(`/${apiVersion}/logout`);
   },
 
   async me(): Promise<User> {
-    const response = await api.get<ApiResponse<User>>('/v1/user');
+    const response = await api.get<ApiResponse<User>>(`/${apiVersion}/user`);
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
     }

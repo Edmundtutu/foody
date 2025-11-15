@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface AnalyticsPeriod {
   start: string;
   end: string;
@@ -35,7 +37,7 @@ const analyticsService = {
     days: number = 7
   ): Promise<AnalyticsData> {
     const response = await api.get<ApiResponse<AnalyticsData>>(
-      `/v1/vendor/${restaurantId}/analytics`,
+      `/${apiVersion}/vendor/${restaurantId}/analytics`,
       {
         params: { days },
       }

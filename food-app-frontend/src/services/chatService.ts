@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface Message {
   id: string;
   conversation_id: string;
@@ -46,7 +48,7 @@ const chatService = {
    */
   async getConversations(filters?: ConversationFilters): Promise<Conversation[]> {
     const response = await api.get<ApiResponse<Conversation[]>>(
-      '/v1/conversations',
+      `/${apiVersion}/conversations`,
       {
         params: filters,
       }
@@ -62,7 +64,7 @@ const chatService = {
    */
   async getConversation(conversationId: string): Promise<Conversation> {
     const response = await api.get<ApiResponse<Conversation>>(
-      `/v1/conversations/${conversationId}`
+      `/${apiVersion}conversations/${conversationId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -78,7 +80,7 @@ const chatService = {
     data: CreateMessageData
   ): Promise<Message> {
     const response = await api.post<ApiResponse<Message>>(
-      `/v1/conversations/${conversationId}/messages`,
+      `/${apiVersion}conversations/${conversationId}/messages`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {

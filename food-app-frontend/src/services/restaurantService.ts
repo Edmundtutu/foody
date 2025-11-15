@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface Restaurant {
   id: string;
   owner_id: string;
@@ -42,7 +44,7 @@ const restaurantService = {
    * Get all restaurants (public)
    */
   async getRestaurants(filters?: RestaurantFilters): Promise<Restaurant[]> {
-    const response = await api.get<ApiResponse<Restaurant[]>>('/v1/restaurants', {
+    const response = await api.get<ApiResponse<Restaurant[]>>(`/${apiVersion}/restaurants`, {
       params: filters,
     });
     if (response.data.status === 'success' && response.data.data) {
@@ -56,7 +58,7 @@ const restaurantService = {
    */
   async getRestaurant(restaurantId: string): Promise<Restaurant> {
     const response = await api.get<ApiResponse<Restaurant>>(
-      `/v1/restaurants/${restaurantId}`
+      `/${apiVersion}/restaurants/${restaurantId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -69,7 +71,7 @@ const restaurantService = {
    */
   async createRestaurant(data: CreateRestaurantData): Promise<Restaurant> {
     const response = await api.post<ApiResponse<Restaurant>>(
-      '/v1/restaurants',
+      `/${apiVersion}/restaurants`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -86,7 +88,7 @@ const restaurantService = {
     data: UpdateRestaurantData
   ): Promise<Restaurant> {
     const response = await api.put<ApiResponse<Restaurant>>(
-      `/v1/restaurants/${restaurantId}`,
+      `/${apiVersion}/restaurants/${restaurantId}`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -100,7 +102,7 @@ const restaurantService = {
    */
   async deleteRestaurant(restaurantId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/restaurants/${restaurantId}`
+      `/${apiVersion}/restaurants/${restaurantId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete restaurant');

@@ -1,6 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
 
+const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
+
 export interface InventoryNode {
   id: string;
   restaurant_id: string;
@@ -88,7 +90,7 @@ const kitchenService = {
    */
   async getGraph(restaurantId: string): Promise<KitchenGraph> {
     const response = await api.get<ApiResponse<KitchenGraph>>(
-      `/v1/kitchen/restaurants/${restaurantId}/graph`
+      `/${apiVersion}/kitchen/restaurants/${restaurantId}/graph`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -101,7 +103,7 @@ const kitchenService = {
    */
   async getNode(nodeId: string): Promise<InventoryNode> {
     const response = await api.get<ApiResponse<InventoryNode>>(
-      `/v1/kitchen/nodes/${nodeId}`
+      `/${apiVersion}/kitchen/nodes/${nodeId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -114,7 +116,7 @@ const kitchenService = {
    */
   async createNode(data: CreateNodeData): Promise<InventoryNode> {
     const response = await api.post<ApiResponse<InventoryNode>>(
-      '/v1/kitchen/nodes',
+      `/${apiVersion}/kitchen/nodes`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -128,7 +130,7 @@ const kitchenService = {
    */
   async toggleNode(nodeId: string): Promise<InventoryNode> {
     const response = await api.patch<ApiResponse<InventoryNode>>(
-      `/v1/kitchen/nodes/${nodeId}/toggle`
+      `/${apiVersion}/kitchen/nodes/${nodeId}/toggle`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -141,7 +143,7 @@ const kitchenService = {
    */
   async moveNode(nodeId: string, data: MoveNodeData): Promise<InventoryNode> {
     const response = await api.patch<ApiResponse<InventoryNode>>(
-      `/v1/kitchen/nodes/${nodeId}/move`,
+      `/${apiVersion}/kitchen/nodes/${nodeId}/move`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -155,7 +157,7 @@ const kitchenService = {
    */
   async deleteNode(nodeId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/kitchen/nodes/${nodeId}`
+      `/${apiVersion}/kitchen/nodes/${nodeId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete node');
@@ -167,7 +169,7 @@ const kitchenService = {
    */
   async createEdge(data: CreateEdgeData): Promise<InventoryNodeEdge> {
     const response = await api.post<ApiResponse<InventoryNodeEdge>>(
-      '/v1/kitchen/edges',
+      `/${apiVersion}/kitchen/edges`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
@@ -181,7 +183,7 @@ const kitchenService = {
    */
   async deleteEdge(edgeId: string): Promise<void> {
     const response = await api.delete<ApiResponse<null>>(
-      `/v1/kitchen/edges/${edgeId}`
+      `/${apiVersion}/kitchen/edges/${edgeId}`
     );
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete edge');
