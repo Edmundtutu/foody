@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Button } from './button';
-import { Input } from './input';
-import { Badge } from './badge';
-import { Avatar, AvatarFallback } from './avatar';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, 
   ShoppingCart, 
@@ -14,12 +14,12 @@ import {
   Bell,
   MessageCircle
 } from 'lucide-react';
-import { User as UserType } from './index';
-import { useAuth } from './AuthContext';
-import { useCart } from './CartContext';
-import { NotificationList } from './NotificationList';
-import { useUnreadCount } from './useUnreadCount';
-import ErrorBoundary from './ErrorBoundary';
+import { User as UserType } from '@/types';
+import { useAuth } from '@/context/AuthContext';
+import { useCart } from '@/context/CartContext';
+import { NotificationList } from '@/components/NotificationList';
+import { useUnreadCount } from '@/hooks/useUnreadCount';
+import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface NavbarProps {
   user: UserType | null;

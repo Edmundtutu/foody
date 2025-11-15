@@ -10,7 +10,7 @@ import {ChatProvider} from "@/context/ChatContext.tsx";
 import {MultiChatProvider} from "@/context/MultiChatContext.tsx";
 import {AuthProvider} from "@/context/AuthContext.tsx";
 
-const queryClient = new QueryClient({s
+const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,

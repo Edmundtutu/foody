@@ -77,13 +77,19 @@ class KitchenGraphTest extends TestCase
             'restaurant_id' => $restaurant->id,
         ]);
         
+        // Create a dish for the node
+        $dish = \App\Models\Dish::factory()->create([
+            'restaurant_id' => $restaurant->id,
+            'category_id' => $category->id,
+        ]);
+        
         Sanctum::actingAs($user);
 
         $response = $this->postJson('/api/v1/kitchen/nodes', [
             'restaurant_id' => $restaurant->id,
             'category_id' => $category->id,
             'entity_type' => 'dish',
-            'entity_id' => 'test-dish-id',
+            'entity_id' => $dish->id,
             'display_name' => 'Test Dish',
             'x' => 100,
             'y' => 200,
@@ -112,7 +118,7 @@ class KitchenGraphTest extends TestCase
                     'restaurant_id' => $restaurant->id,
                     'category_id' => $category->id,
                     'entity_type' => 'dish',
-                    'entity_id' => 'test-dish-id',
+                    'entity_id' => $dish->id,
                     'display_name' => 'Test Dish',
                     'x' => 100,
                     'y' => 200,
@@ -124,7 +130,7 @@ class KitchenGraphTest extends TestCase
             'restaurant_id' => $restaurant->id,
             'category_id' => $category->id,
             'entity_type' => 'dish',
-            'entity_id' => 'test-dish-id',
+            'entity_id' => $dish->id,
             'display_name' => 'Test Dish',
             'x' => 100,
             'y' => 200,

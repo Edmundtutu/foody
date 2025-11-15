@@ -88,12 +88,18 @@ class KitchenGraphApiTest extends TestCase
 
     public function test_can_create_node(): void
     {
+        // Create a dish first for the node
+        $dish = \App\Models\Dish::factory()->create([
+            'restaurant_id' => $this->restaurant->id,
+            'category_id' => $this->category->id,
+        ]);
+
         $response = $this->actingAs($this->user, 'sanctum')
             ->postJson('/api/v1/kitchen/nodes', [
                 'restaurant_id' => $this->restaurant->id,
                 'category_id' => $this->category->id,
                 'entity_type' => 'dish',
-                'entity_id' => 'test-dish-123',
+                'entity_id' => $dish->id,
                 'display_name' => 'Test Dish',
                 'x' => 100,
                 'y' => 200,
