@@ -19,6 +19,7 @@ return new class extends Migration
             $table->string('password')->nullable();
             $table->enum('role', ['customer', 'restaurant', 'admin'])->default('customer');
             $table->json('profile')->nullable();
+            $table->rememberToken();
             $table->timestamps();
             $table->softDeletes();
         });
