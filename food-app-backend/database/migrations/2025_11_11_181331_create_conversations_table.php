@@ -12,17 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('conversations', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('order_id', 26);
-            $table->char('customer_id', 26);
-            $table->char('restaurant_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('order_id')->constrained();
+            $table->foreignUlid('customer_id')->constrained('users');
+            $table->foreignUlid('restaurant_id')->constrained();
             $table->enum('status', ['active', 'closed', 'archived'])->default('active');
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
-
-            $table->foreign('order_id')->references('id')->on('orders');
-            $table->foreign('customer_id')->references('id')->on('users');
-            $table->foreign('restaurant_id')->references('id')->on('restaurants');
         });
     }
 

@@ -12,15 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('menu_categories', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('restaurant_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('restaurant_id')->constrained();
             $table->string('name');
             $table->text('description')->nullable();
             $table->integer('display_order')->default(0);
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('restaurant_id')->references('id')->on('restaurants');
         });
     }
 

@@ -18,10 +18,8 @@ return new class extends Migration
 
         // Add category_id and available to inventory_nodes
         Schema::table('inventory_nodes', function (Blueprint $table) {
-            $table->char('category_id', 26)->nullable()->after('restaurant_id');
+            $table->foreignUlid('category_id')->nullable()->after('restaurant_id')->constrained('menu_categories');
             $table->boolean('available')->default(true)->after('y');
-
-            $table->foreign('category_id')->references('id')->on('menu_categories');
         });
     }
 
