@@ -12,15 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('dish_options', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('dish_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('dish_id')->constrained();
             $table->string('name');
             $table->unsignedInteger('extra_cost')->default(0);
             $table->boolean('required')->default(false);
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('dish_id')->references('id')->on('dishes');
         });
     }
 

@@ -12,9 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('dishes', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('restaurant_id', 26);
-            $table->char('category_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('restaurant_id')->constrained();
+            $table->foreignUlid('category_id')->constrained('menu_categories');
             $table->string('name');
             $table->text('description')->nullable();
             $table->unsignedInteger('price')->default(0);
@@ -24,9 +24,6 @@ return new class extends Migration
             $table->json('tags')->nullable();
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('restaurant_id')->references('id')->on('restaurants');
-            $table->foreign('category_id')->references('id')->on('menu_categories');
         });
     }
 

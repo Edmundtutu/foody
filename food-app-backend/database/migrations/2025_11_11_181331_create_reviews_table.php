@@ -12,15 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('reviews', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('user_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('user_id')->constrained();
             $table->enum('reviewable_type', ['restaurant', 'dish']);
             $table->char('reviewable_id', 26);
             $table->integer('rating')->unsigned();
             $table->text('comment')->nullable();
             $table->timestamps();
-
-            $table->foreign('user_id')->references('id')->on('users');
         });
     }
 

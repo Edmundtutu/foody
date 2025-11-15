@@ -12,17 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('inventory_node_edges', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('restaurant_id', 26);
-            $table->char('source_node_id', 26);
-            $table->char('target_node_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('restaurant_id')->constrained();
+            $table->foreignUlid('source_node_id')->constrained('inventory_nodes');
+            $table->foreignUlid('target_node_id')->constrained('inventory_nodes');
             $table->string('label')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
-
-            $table->foreign('restaurant_id')->references('id')->on('restaurants');
-            $table->foreign('source_node_id')->references('id')->on('inventory_nodes');
-            $table->foreign('target_node_id')->references('id')->on('inventory_nodes');
         });
     }
 

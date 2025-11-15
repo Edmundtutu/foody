@@ -4,7 +4,6 @@ namespace App\Services\Inventory;
 
 use App\Models\Dish;
 use App\Models\InventoryNode;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class InventoryNodeService
@@ -29,10 +28,6 @@ class InventoryNodeService
                     'entity_id' => ['The dish does not belong to the specified restaurant.'],
                 ]);
             }
-        }
-
-        if (! isset($data['id'])) {
-            $data['id'] = Str::ulid();
         }
 
         return InventoryNode::create($data);

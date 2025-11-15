@@ -12,16 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('messages', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('conversation_id', 26);
-            $table->char('sender_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('conversation_id')->constrained();
+            $table->foreignUlid('sender_id')->constrained('users');
             $table->enum('sender_role', ['customer', 'restaurant', 'system'])->default('customer');
             $table->text('content')->nullable();
             $table->timestamp('read_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
-
-            $table->foreign('conversation_id')->references('id')->on('conversations');
-            $table->foreign('sender_id')->references('id')->on('users');
         });
     }
 

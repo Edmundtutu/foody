@@ -12,8 +12,8 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('restaurants', function (Blueprint $table) {
-            $table->char('id', 26)->primary();
-            $table->char('owner_id', 26);
+            $table->ulid('id')->primary();
+            $table->foreignUlid('owner_id')->constrained('users');
             $table->string('name');
             $table->text('description')->nullable();
             $table->string('phone', 30)->nullable();
@@ -25,8 +25,6 @@ return new class extends Migration
             $table->json('config')->nullable();
             $table->timestamps();
             $table->softDeletes();
-
-            $table->foreign('owner_id')->references('id')->on('users');
         });
     }
 

@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
-use App\Traits\HasUlid;
+use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Message extends Model
 {
-    use HasFactory, HasUlid;
+    use HasFactory, HasUlids;
 
     public $timestamps = false;
 
