@@ -21,24 +21,30 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 // Private channel for conversation messages
 Broadcast::channel('conversation.{conversationId}', function ($user, $conversationId) {
-    $conversation = Conversation::find($conversationId);
+    $conversation = Conversation::with('order.restaurant')->find($conversationId);
     
     if (!$conversation) {
         return false;
     }
     
-    // User can listen if they're the customer or if they own the restaurant
-    return $conversation->customer_id === $user->id || 
-           Restaurant::where('id', $conversation->restaurant_id)
-                     ->where('user_id', $user->id)
-                     ->exists();
+    // Check if user is the customer
+    if ($user->id === $conversation->customer_id) {
+        return true;
+    }
+    
+    // Check if user is the restaurant manager (owner of the restaurant)
+    if ($conversation->order && $conversation->order->restaurant) {
+        return $user->id === $conversation->order->restaurant->owner_id;
+    }
+    
+    return false;
 });
 
 // Private channel for restaurant updates (order status, etc.)
 Broadcast::channel('restaurant.{restaurantId}', function ($user, $restaurantId) {
     // User can listen if they own this restaurant
     return Restaurant::where('id', $restaurantId)
-                     ->where('user_id', $user->id)
+                     ->where('owner_id', $user->id)
                      ->exists();
 });
 

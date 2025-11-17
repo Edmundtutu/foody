@@ -74,10 +74,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders', [OrderController::class, 'store']);
         Route::put('/orders/{id}', [OrderController::class, 'update']);
 
-        // Conversations & Messages
-        Route::get('/conversations', [ConversationController::class, 'index']);
-        Route::get('/conversations/{id}', [ConversationController::class, 'show']);
+        // Order-specific conversation endpoints
+        Route::post('/orders/{orderId}/conversations', [ConversationController::class, 'store']);
+        Route::get('/orders/{orderId}/conversations', [ConversationController::class, 'getForOrder']);
+        
+        // Conversation message endpoints
         Route::post('/conversations/{conversationId}/messages', [MessageController::class, 'store']);
+        Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'index']);
+        Route::post('/conversations/{conversationId}/read', [ConversationController::class, 'markAsRead']);
 
         // Reviews
         Route::post('/reviews', [ReviewController::class, 'store']);
