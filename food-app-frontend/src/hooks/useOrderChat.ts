@@ -38,7 +38,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
   
   const retryCountRef = useRef(0);
   const maxRetries = 3;
-  const echoChannelRef = useRef<any>(null);
+  const echoChannelRef = useRef<string | null>(null);
 
   /**
    * Load or create conversation for the order
@@ -72,8 +72,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       setConversation(conversationData);
       setMessages(conversationData.messages || []);
       retryCountRef.current = 0;
-    } catch (err: any) {
-      if (err.response?.status === 404) {
+    } catch (err) {
+      const error = err as { response?: { status?: number; data?: { message?: string } } };
+      if (error.response?.status === 404) {
         // Conversation doesn't exist, create it
         try {
           const token = localStorage.getItem('auth_token');
@@ -92,8 +93,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
           setConversation(conversationData);
           setMessages(conversationData.messages || []);
           retryCountRef.current = 0;
-        } catch (createErr: any) {
-          const errorMsg = createErr.response?.data?.message || 'Failed to create conversation';
+        } catch (createErr) {
+          const createError = createErr as { response?: { data?: { message?: string } } };
+          const errorMsg = createError.response?.data?.message || 'Failed to create conversation';
           setError(new Error(errorMsg));
           toast({
             title: 'Error',
@@ -102,7 +104,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
           });
         }
       } else {
-        const errorMsg = err.response?.data?.message || 'Failed to load conversation';
+        const errorMsg = error.response?.data?.message || 'Failed to load conversation';
         setError(new Error(errorMsg));
         
         // Retry with exponential backoff
@@ -155,7 +157,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
             return [...prevMessages, newMessage];
           });
         })
-        .error((error: any) => {
+        .error((error: unknown) => {
           console.error('Echo channel error:', error);
           setConnectionStatus('error');
         });
@@ -213,11 +215,12 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       
       // Auto mark as read after sending
       await markAsRead();
-    } catch (err: any) {
+    } catch (err) {
       // Rollback optimistic update
       setMessages((prev) => prev.filter(m => m.id !== tempId));
       
-      const errorMsg = err.response?.data?.message || 'Failed to send message';
+      const error = err as { response?: { data?: { message?: string } } };
+      const errorMsg = error.response?.data?.message || 'Failed to send message';
       toast({
         title: 'Failed to send message',
         description: errorMsg,
@@ -228,7 +231,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
     } finally {
       setIsSending(false);
     }
-  }, [conversation?.id, toast]);
+  }, [conversation?.id, toast, markAsRead]);
 
   /**
    * Mark all messages from other user as read
