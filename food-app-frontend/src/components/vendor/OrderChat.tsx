@@ -10,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, Send, AlertCircle, Wifi, WifiOff, Check, CheckCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useMobile } from '@/hooks/use-mobile';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface OrderChatProps {
   orderId: string;
@@ -29,7 +29,7 @@ export const OrderChat: React.FC<OrderChatProps> = ({
   const { user } = useAuth();
   const [messageInput, setMessageInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const isMobile = useMobile();
+  const isMobile = useIsMobile();
 
   // Auto-scroll to bottom when messages change
   const scrollToBottom = () => {
