@@ -6,8 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import '../styles/App.css';
 import '../styles/index.css';
 import ErrorBoundary from "@/components/ErrorBoundary.tsx";
-import {ChatProvider} from "@/context/ChatContext.tsx";
-import {MultiChatProvider} from "@/context/MultiChatContext.tsx";
 import {AuthProvider} from "@/context/AuthContext.tsx";
 import {CartProvider} from "@/context/CartContext.tsx";
 import {VendorProvider} from "@/context/VendorContext.tsx";
@@ -29,15 +27,11 @@ function App() {
                   <CartProvider>
                       <VendorProvider>
                           <ErrorBoundary>
-                              <ChatProvider>
-                                  <MultiChatProvider>
-                                      <Router>
-                                          <div className="App min-h-screen bg-background">
-                                              <AppRoutes />
-                                          </div>
-                                      </Router>
-                                  </MultiChatProvider>
-                              </ChatProvider>
+                              <Router>
+                                  <div className="App min-h-screen bg-background">
+                                      <AppRoutes />
+                                  </div>
+                              </Router>
                           </ErrorBoundary>
                       </VendorProvider>
                   </CartProvider>

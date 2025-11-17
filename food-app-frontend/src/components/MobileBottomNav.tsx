@@ -14,7 +14,6 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { Badge } from '@/components/ui/badge';
-import { useUnreadCount } from '@/hooks/useUnreadCount';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface NavItem {
@@ -29,7 +28,6 @@ const MobileBottomNav: React.FC = () => {
   const { user } = useAuth();
   const { getItemCount } = useCart();
   const location = useLocation();
-  const { totalUnreadCount } = useUnreadCount();
   // Chat functionality removed - will be re-implemented with new system
 
   if (!user) return null;
@@ -40,7 +38,6 @@ const MobileBottomNav: React.FC = () => {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Discover', href: '/discover', icon: Search },
     { name: 'Map', href: '/map', icon: MapPin },
-    { name: 'Chat', icon: MessageCircle, badge: totalUnreadCount, onClick: () => window.location.href = '/chat/conversations' },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 
@@ -48,7 +45,6 @@ const MobileBottomNav: React.FC = () => {
     { name: 'Dashboard', href: '/vendor/dashboard', icon: BarChart3 },
     { name: 'In Kitchen', href: '/vendor/kitchen', icon: Package },
     { name: 'Orders', href: '/vendor/orders', icon: ShoppingCart },
-    { name: 'Chat', icon: MessageCircle, badge: totalUnreadCount, onClick: () => window.location.href = '/chat/conversations' },
     { name: 'Restaurant', href: '/vendor/profile', icon: Store },
   ];
 
