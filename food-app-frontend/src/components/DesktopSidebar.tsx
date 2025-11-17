@@ -42,13 +42,13 @@ const DesktopSidebar: React.FC = () => {
 
   const vendorNavItems: NavItem[] = [
     { name: 'Dashboard', href: '/vendor/dashboard', icon: BarChart3 },
-    { name: 'In Kitchen', href: '/vendor/Kitchen', icon: Package },
+    { name: 'In Kitchen', href: '/vendor/kitchen', icon: Package },
     { name: 'Orders', href: '/vendor/orders', icon: ShoppingCart },
     { name: 'Restaurant Profile', href: '/vendor/profile', icon: Store },
     { name: 'Account', href: '/vendor/account', icon: User },
   ];
 
-  const navItems = user.role === 'vendor' ? vendorNavItems : customerNavItems;
+  const navItems = user.role === 'restaurant' ? vendorNavItems : customerNavItems;
 
   const isActivePath = (path: string) => {
     if (path === '/') {

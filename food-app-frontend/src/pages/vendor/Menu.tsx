@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -31,17 +31,16 @@ import {
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Plus,
   Edit,
   Trash2,
   Utensils,
   Package,
+  AlertCircle,
   ChefHat,
 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { useRestaurantsByOwner } from '@/hooks/queries/useRestaurants';
+import { useVendor } from '@/context/VendorContext';
 import {
   useMenuCategories,
   useCreateMenuCategory,
@@ -55,6 +54,8 @@ import {
   useDeleteDish,
 } from '@/hooks/queries/useDishes';
 import { useCreateNode } from '@/hooks/queries/useKitchenNodes';
+import { MenuItemsSkeleton } from '@/components/vendor/LoadingSkeletons';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { MenuCategory, Dish } from '@/services/menuService';
 import kitchenService from '@/services/kitchenService';
@@ -76,27 +77,35 @@ interface DishFormData {
 }
 
 const VendorMenu: React.FC = () => {
-  const { user } = useAuth();
+  const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [dishDialogOpen, setDishDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  // Load current vendor's first restaurant as the active restaurant
-  const { data: restaurants } = useRestaurantsByOwner(user?.id);
-  const activeRestaurantId = useMemo(
-    () => restaurants?.[0]?.id as string | undefined,
-    [restaurants]
+  // Fetch categories and dishes
+  const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useMenuCategories(
+    restaurantId || null
+  );
+  const { data: dishes, isLoading: dishesLoading, error: dishesError } = useDishes(
+    restaurantId ? { restaurant_id: restaurantId } : undefined
   );
 
-  // Fetch categories and dishes
-  const { data: categories, isLoading: categoriesLoading } = useMenuCategories(
-    activeRestaurantId || null
-  );
-  const { data: dishes, isLoading: dishesLoading } = useDishes(
-    activeRestaurantId ? { restaurant_id: activeRestaurantId } : undefined
-  );
+  // Helper: group dishes by category
+  const dishesByCategory = (dishes || []).reduce((acc, dish) => {
+    const catId = dish.category_id || 'uncategorized';
+    if (!acc[catId]) {
+      acc[catId] = [];
+    }
+    acc[catId].push(dish);
+    return acc;
+  }, {} as Record<string, Dish[]>);
+
+  // Helper: filter dishes by selected category
+  const filteredDishes = selectedCategoryId
+    ? dishesByCategory[selectedCategoryId] || []
+    : dishes || [];
 
   // Mutations
   const createCategoryMutation = useCreateMenuCategory();
@@ -157,7 +166,7 @@ const VendorMenu: React.FC = () => {
 
   // Handle category form submission
   const onCategorySubmit = async (data: CategoryFormData) => {
-    if (!activeRestaurantId) {
+    if (!restaurantId) {
       toast.error('No restaurant selected');
       return;
     }
@@ -168,14 +177,14 @@ const VendorMenu: React.FC = () => {
           categoryId: editingCategory.id,
           data: {
             ...data,
-            restaurant_id: activeRestaurantId,
+            restaurant_id: restaurantId,
           },
         });
         toast.success('Category updated successfully');
       } else {
         await createCategoryMutation.mutateAsync({
           ...data,
-          restaurant_id: activeRestaurantId,
+          restaurant_id: restaurantId,
         });
         toast.success('Category created successfully');
       }
@@ -189,7 +198,7 @@ const VendorMenu: React.FC = () => {
 
   // Handle dish form submission
   const onDishSubmit = async (data: DishFormData) => {
-    if (!activeRestaurantId) {
+    if (!restaurantId) {
       toast.error('No restaurant selected');
       return;
     }
@@ -201,14 +210,14 @@ const VendorMenu: React.FC = () => {
           dishId: editingDish.id,
           data: {
             ...data,
-            restaurant_id: activeRestaurantId,
+            restaurant_id: restaurantId,
           },
         });
         toast.success('Dish updated successfully');
       } else {
         createdDish = await createDishMutation.mutateAsync({
           ...data,
-          restaurant_id: activeRestaurantId,
+          restaurant_id: restaurantId,
         });
         toast.success('Dish created successfully');
 
@@ -216,14 +225,14 @@ const VendorMenu: React.FC = () => {
         if (data.addToKitchen && createdDish.category_id) {
           try {
             // Get the graph to find a suitable position
-            const graph = await kitchenService.getGraph(activeRestaurantId);
+            const graph = await kitchenService.getGraph(restaurantId);
             const category = graph.categories?.find(
               (c) => c.id === createdDish.category_id
             );
 
             if (category) {
               await createNodeMutation.mutateAsync({
-                restaurant_id: activeRestaurantId,
+                restaurant_id: restaurantId,
                 category_id: createdDish.category_id,
                 entity_type: 'dish',
                 entity_id: createdDish.id,
@@ -276,24 +285,21 @@ const VendorMenu: React.FC = () => {
     }
   };
 
-  // Filter dishes by selected category
-  const filteredDishes = useMemo(() => {
-    if (!dishes) return [];
-    if (!selectedCategoryId) return dishes;
-    return dishes.filter((dish) => dish.category_id === selectedCategoryId);
-  }, [dishes, selectedCategoryId]);
+  // Loading state
+  if (vendorLoading || categoriesLoading || dishesLoading) {
+    return (
+      <div className="container mx-auto py-6 px-4 space-y-6">
+        <div className="mb-6">
+          <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
+        </div>
+        <MenuItemsSkeleton count={8} />
+      </div>
+    );
+  }
 
-  // Group dishes by category
-  const dishesByCategory = useMemo(() => {
-    if (!dishes || !categories) return {};
-    const grouped: Record<string, Dish[]> = {};
-    categories.forEach((cat) => {
-      grouped[cat.id] = dishes.filter((dish) => dish.category_id === cat.id);
-    });
-    return grouped;
-  }, [dishes, categories]);
-
-  if (!activeRestaurantId) {
+  // No restaurant found
+  if (!hasRestaurant) {
     return (
       <div className="container mx-auto py-6 px-4">
         <Card>
@@ -303,6 +309,29 @@ const VendorMenu: React.FC = () => {
             <p className="text-muted-foreground">
               Create a restaurant to manage your menu.
             </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error loading data
+  if (categoriesError || dishesError) {
+    return (
+      <div className="container mx-auto py-6 px-4">
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="text-lg font-medium mb-2">Failed to load menu data</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {categoriesError ? 'Failed to load categories' : 'Failed to load dishes'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="outline"
+            >
+              Try Again
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -719,7 +748,7 @@ const VendorMenu: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDishes.map((dish) => (
+              {filteredDishes.map((dish: Dish) => (
                 <Card key={dish.id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">

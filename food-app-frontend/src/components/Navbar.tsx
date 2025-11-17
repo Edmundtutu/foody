@@ -14,7 +14,7 @@ import {
   Bell,
   MessageCircle
 } from 'lucide-react';
-import { User as UserType } from '@/types';
+import type { User as UserType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { NotificationList } from '@/components/NotificationList';

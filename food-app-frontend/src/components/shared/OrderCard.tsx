@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Order } from '@/types/orders';
@@ -18,9 +18,8 @@ import CameraCapture from '@/components/features/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
 import { useChat } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
-import { useMultiChat } from '@/context/MultiChatContext';
 import { useUnreadCount } from '@/hooks/useUnreadCount';
-import { useChatLayout } from '@/hooks/useChatLayout';
+import { useOpenOrderChat } from '@/hooks/useOpenOrderChat';
 
 type OrderCardContext = 'customer' | 'vendor';
 
@@ -64,88 +63,36 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const imageCapture = useImageCapture();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { conversations, ensureConversationForOrder, loadConversations, setActiveConversation } = useChat();
-  const { openChat } = useMultiChat();
-  const chatLayout = useChatLayout();
+  const { conversations } = useChat();
+  const { openOrderChat } = useOpenOrderChat({
+    onError: (error) => {
+      toast({
+        title: 'Chat Error',
+        description: error.message || 'Failed to open chat',
+        variant: 'destructive',
+      });
+    }
+  });
   
   // Find conversation for this order to get unread count
   const conversation = conversations.find(conv => conv.order_id === String(order.id));
   const { conversationUnreadCount } = useUnreadCount(conversation?.id);
-  
-  // Debug layout changes
-  useEffect(() => {
-    console.log('🔄 OrderCard layout changed to:', chatLayout, 'for order:', order.id);
-  }, [chatLayout, order.id]);
+
   const createdAt = new Date(order.created_at);
   const deliveryType = order.delivery_address && order.delivery_address !== 'N/A for pickup' ? 'Delivery' : 'Pickup';
 
   // Check if order is in a state that allows confirm/reject actions
   const canPerformActions = order.status === 'pending';
 
-  // Handle chat button click with proper behavior for vendor vs customer
-  const handleChatClick = async () => {
-    console.log('👤 User role:', user?.role);
-    console.log('📱 Chat layout:', chatLayout);
-    console.log('📦 Order ID:', order.id);
-    console.log('💬 Existing conversation:', conversation);
-
+  // Handle chat button click - simplified with new hook
+  const handleChatClick = useCallback(async () => {
     try {
-      if (user?.role === 'vendor') {
-
-        if (chatLayout === 'mobile') {
-          console.log('📱 Mobile: Navigating to chat page');
-          // Check if we're already on the chat page to prevent unnecessary navigation
-          const currentPath = window.location.pathname;
-          const targetPath = `/chat/conversation/${order.id}`;
-
-          if (currentPath !== targetPath) {
-            console.log('🔄 Navigating from', currentPath, 'to', targetPath);
-            window.location.href = targetPath;
-          } else {
-            console.log('📍 Already on chat page, no navigation needed');
-          }
-        } else {
-          console.log('🖥️ Desktop: Opening docked chat window');
-
-          if (conversation) {
-            console.log('✅ Using existing conversation:', conversation);
-            // CRITICAL: Set the conversation as active so DockedChatManager can render it
-            setActiveConversation(conversation);
-            console.log('🎯 Active conversation set (existing):', conversation);
-            openChat(conversation, order);
-          } else {
-            console.log('🔄 No existing conversation, creating/loading one...');
-
-            // Ensure conversation exists and refresh conversations list
-            const conv = await ensureConversationForOrder(String(order.id));
-            console.log('📞 ensureConversationForOrder result:', conv);
-
-            if (conv) {
-              console.log('🔄 Refreshing conversations list...');
-              await loadConversations();
-              console.log('✅ Conversations refreshed, setting active conversation...');
-
-              // CRITICAL: Set the conversation as active so DockedChatManager can render it
-              setActiveConversation(conv);
-              console.log('🎯 Active conversation set:', conv);
-
-              console.log('✅ Opening chat...');
-              openChat(conv, order);
-            } else {
-              console.error('❌ No conversation returned from ensureConversationForOrder');
-            }
-          }
-        }
-      } else {
-        console.log('👤 Customer flow: Going to conversation list');
-        window.location.href = '/chat/conversations';
-      }
+      await openOrderChat(order);
     } catch (error) {
-      console.error('❌ Failed to open chat:', error);
-      // Fallback to conversation list
-      window.location.href = '/chat/conversations';
+      // Error already handled in hook's onError callback
+      console.error('Chat error:', error);
     }
-  };
+  }, [order, openOrderChat]);
   
   // Check if order has completed an action (confirmed/rejected)
   const hasCompletedAction = order.status === 'processing' || order.status === 'cancelled';
@@ -361,7 +308,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                       type="button"
                       onClick={handleChatClick}
                       className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors min-w-0 relative"
-                      title={user?.role === 'vendor' ? "Open chat for this order" : "View conversations"}
+                      title={user?.role === 'restaurant' ? "Open chat for this order" : "View conversations"}
                   >
                     <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                     <span className="hidden sm:inline truncate">Chat</span>

@@ -119,6 +119,34 @@ const restaurantService = {
     const restaurants = await this.getRestaurants();
     return restaurants.filter((r) => r.owner_id === ownerId);
   },
+
+  /**
+   * Get all restaurants owned by authenticated vendor
+   * Protected endpoint - requires authentication
+   */
+  async getVendorRestaurants(): Promise<Restaurant[]> {
+    const response = await api.get<ApiResponse<Restaurant[]>>(
+      `/${apiVersion}/me/restaurants`
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch your restaurants');
+  },
+
+  /**
+   * Get single restaurant owned by authenticated vendor
+   * Protected endpoint - requires authentication
+   */
+  async getVendorRestaurant(restaurantId: string): Promise<Restaurant> {
+    const response = await api.get<ApiResponse<Restaurant>>(
+      `/${apiVersion}/me/restaurants/${restaurantId}`
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch restaurant');
+  },
 };
 
 export default restaurantService;

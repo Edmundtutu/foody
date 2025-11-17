@@ -27,3 +27,20 @@ export function useRestaurantsByOwner(ownerId: string | undefined) {
   });
 }
 
+export function useVendorRestaurants() {
+  return useQuery({
+    queryKey: ['vendor', 'restaurants'],
+    queryFn: () => restaurantService.getVendorRestaurants(),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+export function useVendorRestaurant(restaurantId: string | undefined) {
+  return useQuery({
+    queryKey: ['vendor', 'restaurants', restaurantId],
+    queryFn: () => restaurantService.getVendorRestaurant(restaurantId!),
+    enabled: !!restaurantId,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+

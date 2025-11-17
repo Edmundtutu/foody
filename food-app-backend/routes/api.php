@@ -42,6 +42,10 @@ Route::prefix('v1')->group(function () {
         // Auth endpoints
         Route::post('/logout', [AuthenticatedSessionController::class, 'destroy']);
 
+        // Vendor-specific routes (get authenticated user's restaurants)
+        Route::get('/me/restaurants', [RestaurantController::class, 'getMyRestaurants']);
+        Route::get('/me/restaurants/{id}', [RestaurantController::class, 'getMyRestaurant']);
+
         // Restaurants
         Route::post('/restaurants', [RestaurantController::class, 'store']);
         Route::put('/restaurants/{id}', [RestaurantController::class, 'update']);

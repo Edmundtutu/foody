@@ -9,6 +9,8 @@ import ErrorBoundary from "@/components/ErrorBoundary.tsx";
 import {ChatProvider} from "@/context/ChatContext.tsx";
 import {MultiChatProvider} from "@/context/MultiChatContext.tsx";
 import {AuthProvider} from "@/context/AuthContext.tsx";
+import {CartProvider} from "@/context/CartContext.tsx";
+import {VendorProvider} from "@/context/VendorContext.tsx";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,17 +26,21 @@ function App() {
       <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
               <AuthProvider>
-                  <ErrorBoundary>
-                      <ChatProvider>
-                          <MultiChatProvider>
-                              <Router>
-                                  <div className="App min-h-screen bg-background">
-                                      <AppRoutes />
-                                  </div>
-                              </Router>
-                          </MultiChatProvider>
-                      </ChatProvider>
-                  </ErrorBoundary>
+                  <CartProvider>
+                      <VendorProvider>
+                          <ErrorBoundary>
+                              <ChatProvider>
+                                  <MultiChatProvider>
+                                      <Router>
+                                          <div className="App min-h-screen bg-background">
+                                              <AppRoutes />
+                                          </div>
+                                      </Router>
+                                  </MultiChatProvider>
+                              </ChatProvider>
+                          </ErrorBoundary>
+                      </VendorProvider>
+                  </CartProvider>
               </AuthProvider>
           </QueryClientProvider>
       </ErrorBoundary>

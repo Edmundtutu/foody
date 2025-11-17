@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { useAuth } from '@/context/AuthContext';
-import { useRestaurantsByOwner } from '@/hooks/queries/useRestaurants';
+import { useVendor } from '@/context/VendorContext';
 import {
   useRestaurantOrders,
   useUpdateOrderStatus,
@@ -25,24 +24,17 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
-import { Package, Eye } from 'lucide-react';
+import { Package, AlertCircle } from 'lucide-react';
 import type { Order } from '@/services/orderService';
 
 const VendorOrders: React.FC = () => {
-  const { user } = useAuth();
+  const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
-  // Load current vendor's first restaurant as the active restaurant
-  const { data: restaurants } = useRestaurantsByOwner(user?.id);
-  const activeRestaurantId = useMemo(
-    () => restaurants?.[0]?.id as string | undefined,
-    [restaurants]
-  );
-
   // Fetch orders for the restaurant
-  const { data: orders, isLoading, isError } = useRestaurantOrders(
-    activeRestaurantId || null
+  const { data: orders, isLoading, isError, error } = useRestaurantOrders(
+    restaurantId || null
   );
   const updateOrderStatusMutation = useUpdateOrderStatus();
 
@@ -53,7 +45,7 @@ const VendorOrders: React.FC = () => {
     return orders.filter((order) => order.status === statusFilter);
   }, [orders, statusFilter]);
 
-  // Handle order status update
+  // Handle order status update with better error handling
   const handleUpdateStatus = async (
     orderId: string,
     status: Order['status']
@@ -63,7 +55,11 @@ const VendorOrders: React.FC = () => {
       toast.success(`Order status updated to ${status}`);
       setSelectedOrder(null);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to update order status');
+      const errorMessage = error?.response?.data?.message || 
+                           error?.message || 
+                           'Failed to update order status';
+      toast.error(errorMessage);
+      console.error('Order status update failed:', error);
     }
   };
 
@@ -76,27 +72,14 @@ const VendorOrders: React.FC = () => {
   const handleRejectOrder = async (order: Order) => {
     await handleUpdateStatus(order.id, 'cancelled');
   };
-  if (!activeRestaurantId) {
-    return (
-      <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium mb-2">No restaurant found</h3>
-            <p className="text-muted-foreground">
-              Create a restaurant to view orders.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
-  if (isLoading) {
+  // Loading state
+  if (vendorLoading || isLoading) {
     return (
       <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Skeleton className="h-8 w-48 mb-2" />
+          <Skeleton className="h-4 w-96" />
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
@@ -107,22 +90,50 @@ const VendorOrders: React.FC = () => {
     );
   }
 
+  // No restaurant found
+  if (!hasRestaurant) {
+    return (
+      <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <Card>
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <Package className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium mb-2">No restaurant found</h3>
+            <p className="text-muted-foreground text-center">
+              You need to create a restaurant to view orders.
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Error loading orders
   if (isError) {
     return (
       <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <h1 className="text-2xl sm:text-3xl font-bold mb-6">Incoming Orders</h1>
-        <div className="text-center py-8">
-          <p className="text-muted-foreground">
-            Could not fetch vendor orders. Please try again later.
-          </p>
-        </div>
+        <Card className="border-destructive/50 bg-destructive/5">
+          <CardContent className="flex flex-col items-center justify-center py-12">
+            <AlertCircle className="h-12 w-12 text-destructive mb-4" />
+            <h3 className="text-lg font-medium mb-2">Failed to load orders</h3>
+            <p className="text-muted-foreground text-center mb-4">
+              {error instanceof Error ? error.message : 'An error occurred while loading orders'}
+            </p>
+            <Button 
+              onClick={() => window.location.reload()}
+              variant="outline"
+            >
+              Try Again
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
             Incoming Orders
@@ -132,7 +143,7 @@ const VendorOrders: React.FC = () => {
           </p>
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[180px]">
+          <SelectTrigger className="w-full sm:w-[180px]">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -151,9 +162,9 @@ const VendorOrders: React.FC = () => {
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-center">
               {statusFilter === 'all'
-                ? 'No orders found.'
+                ? 'No orders yet. Orders will appear here when customers place them.'
                 : `No ${statusFilter} orders found.`}
             </p>
           </CardContent>
@@ -197,7 +208,7 @@ const VendorOrders: React.FC = () => {
                     <p className="text-sm font-medium text-muted-foreground">
                       Status
                     </p>
-                    <Badge variant="outline" className="mt-1">
+                    <Badge variant="outline" className="mt-1 capitalize">
                       {selectedOrder.status}
                     </Badge>
                   </div>
@@ -232,13 +243,13 @@ const VendorOrders: React.FC = () => {
                   <p className="text-sm font-medium text-muted-foreground mb-2">
                     Items
                   </p>
-                  <div className="space-y-2">
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {selectedOrder.items?.map((item) => (
                       <div
                         key={item.id}
                         className="flex items-center justify-between p-2 border rounded"
                       >
-                        <div>
+                        <div className="flex-1">
                           <p className="font-medium">
                             {item.dish?.name || 'Unknown Dish'}
                           </p>
@@ -252,7 +263,7 @@ const VendorOrders: React.FC = () => {
                             </p>
                           )}
                         </div>
-                        <p className="font-semibold">
+                        <p className="font-semibold ml-2 flex-shrink-0">
                           {(item.quantity * item.unit_price).toLocaleString()}{' '}
                           UGX
                         </p>
@@ -267,7 +278,7 @@ const VendorOrders: React.FC = () => {
                     <p className="text-sm font-medium text-muted-foreground mb-2">
                       Order Notes
                     </p>
-                    <p className="p-2 border rounded bg-muted/50">
+                    <p className="p-2 border rounded bg-muted/50 text-sm">
                       {selectedOrder.notes}
                     </p>
                   </div>
@@ -284,7 +295,7 @@ const VendorOrders: React.FC = () => {
                         disabled={updateOrderStatusMutation.isPending}
                         className="flex-1"
                       >
-                        Accept Order
+                        {updateOrderStatusMutation.isPending ? 'Accepting...' : 'Accept Order'}
                       </Button>
                       <Button
                         onClick={() =>
@@ -294,7 +305,7 @@ const VendorOrders: React.FC = () => {
                         variant="destructive"
                         className="flex-1"
                       >
-                        Cancel Order
+                        {updateOrderStatusMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
                       </Button>
                     </>
                   )}
@@ -306,7 +317,7 @@ const VendorOrders: React.FC = () => {
                       disabled={updateOrderStatusMutation.isPending}
                       className="flex-1"
                     >
-                      Start Preparing
+                      {updateOrderStatusMutation.isPending ? 'Starting...' : 'Start Preparing'}
                     </Button>
                   )}
                   {selectedOrder.status === 'preparing' && (
@@ -317,7 +328,7 @@ const VendorOrders: React.FC = () => {
                       disabled={updateOrderStatusMutation.isPending}
                       className="flex-1"
                     >
-                      Mark as Ready
+                      {updateOrderStatusMutation.isPending ? 'Updating...' : 'Mark as Ready'}
                     </Button>
                   )}
                   {selectedOrder.status === 'ready' && (
@@ -328,7 +339,7 @@ const VendorOrders: React.FC = () => {
                       disabled={updateOrderStatusMutation.isPending}
                       className="flex-1"
                     >
-                      Complete Order
+                      {updateOrderStatusMutation.isPending ? 'Completing...' : 'Complete Order'}
                     </Button>
                   )}
                 </div>

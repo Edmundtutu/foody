@@ -11,6 +11,9 @@ import VendorLayout from '@/layouts/VendorLayout';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 
+// Chat Pages
+import { ConversationListPage } from '@/pages/chat/ConversationListPage';
+import { ChatPage } from '@/pages/chat/ChatPage';
 
 // Vendor Pages
 import VendorDashboard from '@/pages/vendor/Dashboard';
@@ -18,6 +21,20 @@ import VendorKitchen from '@/pages/vendor/Kitchen';
 import VendorOrders from '@/pages/vendor/Orders';
 import VendorAnalytics from '@/pages/vendor/Analytics';
 import VendorProfile from '@/pages/vendor/Profile';
+import VendorMenu from '@/pages/vendor/Menu';
+
+// Customer Pages (placeholders - to be implemented)
+import Home from '@/pages/customer/Home.tsx';
+import Discover from '@/pages/customer/Discover.tsx';
+import Map from '@/pages/customer/Map.tsx';
+import Favorites from '@/pages/customer/Favorites.tsx';
+import Order from '@/pages/customer/Order.tsx';
+import Profile from '@/pages/customer/Profile.tsx';
+import Cart from '@/pages/customer/Cart.tsx';
+import VendorAccount from '@/pages/vendor/Account';
+
+// Other
+import NotFound from '@/pages/NotFound';
 
 // Route Guards
 interface ProtectedRouteProps {
@@ -27,10 +44,10 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
-                                                           children,
-                                                           requiredRole,
-                                                           layout
-                                                       }) => {
+    children,
+    requiredRole,
+    layout
+}) => {
     const { user, isLoading, isAuthenticated } = useAuth();
 
     if (isLoading) {
@@ -46,7 +63,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     }
 
     if (requiredRole && user && !requiredRole.includes(user.role)) {
-        return <Navigate to="/" replace />;
+        // Redirect restaurants to vendor dashboard, customers to home
+        const redirectPath = user.role === 'restaurant' ? '/vendor/dashboard' : '/';
+        return <Navigate to={redirectPath} replace />;
     }
 
     const Layout = layout === 'vendor' ? VendorLayout : MainLayout;
@@ -54,7 +73,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
 };
 
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { isAuthenticated, isLoading } = useAuth();
+    const { isAuthenticated, isLoading, user } = useAuth();
 
     if (isLoading) {
         return (
@@ -65,7 +84,9 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     }
 
     if (isAuthenticated) {
-        return <Navigate to="/" replace />;
+        // Redirect based on role: restaurants go to vendor dashboard, others go to home
+        const redirectPath = user?.role === 'restaurant' ? '/vendor/dashboard' : '/';
+        return <Navigate to={redirectPath} replace />;
     }
 
     return <AuthLayout>{children}</AuthLayout>;
@@ -73,50 +94,114 @@ const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
 const AppRoutes: React.FC = () => {
     return (
-        <Routes>
-            {/* Public Routes */}
-            <Route path="/login" element={
-                <PublicRoute>
-                    <Login />
-                </PublicRoute>
-            } />
-            <Route path="/register" element={
-                <PublicRoute>
-                    <Register />
-                </PublicRoute>
-            } />
+        <Suspense fallback={
+            <div className="min-h-screen flex items-center justify-center">
+                <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-primary"></div>
+            </div>
+        }>
+            <Routes>
+                {/* Public Routes */}
+                <Route path="/login" element={
+                    <PublicRoute>
+                        <Login />
+                    </PublicRoute>
+                } />
+                <Route path="/register" element={
+                    <PublicRoute>
+                        <Register />
+                    </PublicRoute>
+                } />
 
+                {/* Customer Routes */}
+                <Route path="/" element={
+                    <ProtectedRoute layout="main">
+                        <Home />
+                    </ProtectedRoute>
+                } />
+                <Route path="/discover" element={
+                    <ProtectedRoute layout="main">
+                        <Discover />
+                    </ProtectedRoute>
+                } />
+                <Route path="/map" element={
+                    <ProtectedRoute layout="main">
+                        <Map />
+                    </ProtectedRoute>
+                } />
+                <Route path="/favorites" element={
+                    <ProtectedRoute layout="main">
+                        <Favorites />
+                    </ProtectedRoute>
+                } />
+                <Route path="/order" element={
+                    <ProtectedRoute layout="main">
+                        <Order />
+                    </ProtectedRoute>
+                } />
+                <Route path="/profile" element={
+                    <ProtectedRoute layout="main">
+                        <Profile />
+                    </ProtectedRoute>
+                } />
+                <Route path="/cart" element={
+                    <ProtectedRoute layout="main">
+                        <Cart />
+                    </ProtectedRoute>
+                } />
 
-            {/* Vendor Routes */}
-            <Route path="/vendor/dashboard" element={
-                <ProtectedRoute requiredRole={['vendor']} layout="vendor">
-                    <VendorDashboard />
-                </ProtectedRoute>
-            } />
-            <Route path="/vendor/kitchen" element={
-                <ProtectedRoute requiredRole={['vendor']} layout="vendor">
-                    <VendorKitchen />
-                </ProtectedRoute>
-            } />
-            <Route path="/vendor/orders" element={
-                <ProtectedRoute requiredRole={['vendor']} layout="vendor">
-                    <VendorOrders />
-                </ProtectedRoute>
-            } />
-            <Route path="/vendor/analytics" element={
-                <ProtectedRoute requiredRole={['vendor']} layout="vendor">
-                    <VendorAnalytics />
-                </ProtectedRoute>
-            } />
-            <Route path="/vendor/profile" element={
-                <ProtectedRoute requiredRole={['vendor']} layout="vendor">
-                    <VendorProfile />
-                </ProtectedRoute>
-            } />
+                {/* Chat Routes */}
+                <Route path="/chat/conversations" element={
+                    <ProtectedRoute layout="main">
+                        <ConversationListPage />
+                    </ProtectedRoute>
+                } />
+                <Route path="/chat/conversation/:orderId" element={
+                    <ProtectedRoute layout="main">
+                        <ChatPage />
+                    </ProtectedRoute>
+                } />
 
-            {/* Catch all route */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+                {/* Vendor Routes */}
+                <Route path="/vendor/dashboard" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorDashboard />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/kitchen" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorKitchen />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/orders" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorOrders />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/analytics" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorAnalytics />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/profile" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorProfile />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/menu" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorMenu />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/account" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorAccount />
+                    </ProtectedRoute>
+                } />
+
+                {/* Catch all route - 404 */}
+                <Route path="*" element={<NotFound />} />
+            </Routes>
+        </Suspense>
     );
 };
 

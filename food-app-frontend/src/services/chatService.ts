@@ -64,7 +64,7 @@ const chatService = {
    */
   async getConversation(conversationId: string): Promise<Conversation> {
     const response = await api.get<ApiResponse<Conversation>>(
-      `/${apiVersion}conversations/${conversationId}`
+      `/${apiVersion}/conversations/${conversationId}`
     );
     if (response.data.status === 'success' && response.data.data) {
       return response.data.data;
@@ -80,7 +80,7 @@ const chatService = {
     data: CreateMessageData
   ): Promise<Message> {
     const response = await api.post<ApiResponse<Message>>(
-      `/${apiVersion}conversations/${conversationId}/messages`,
+      `/${apiVersion}/conversations/${conversationId}/messages`,
       data
     );
     if (response.data.status === 'success' && response.data.data) {
