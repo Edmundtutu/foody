@@ -27,10 +27,11 @@ export function useRestaurantsByOwner(ownerId: string | undefined) {
   });
 }
 
-export function useVendorRestaurants() {
+export function useVendorRestaurants(enabled: boolean = true) {
   return useQuery({
     queryKey: ['vendor', 'restaurants'],
     queryFn: () => restaurantService.getVendorRestaurants(),
+    enabled, // Only run query when enabled is true
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

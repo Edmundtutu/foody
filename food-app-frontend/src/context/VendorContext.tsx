@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useMemo, useCallback } from 'react';
 import { useVendorRestaurants } from '@/hooks/queries/useRestaurants';
+import { useAuth } from '@/context/AuthContext';
 import type { Restaurant } from '@/services/restaurantService';
 
 interface VendorContextType {
@@ -27,8 +28,13 @@ interface VendorProviderProps {
 }
 
 export const VendorProvider: React.FC<VendorProviderProps> = ({ children }) => {
+  const { user, isAuthenticated } = useAuth();
+  
+  // Only fetch restaurants if user is authenticated AND is a restaurant role
+  const shouldFetch = isAuthenticated && user?.role === 'restaurant';
+  
   // Use vendor-specific endpoint to fetch only user's restaurants
-  const { data: restaurants = [], isLoading, error } = useVendorRestaurants();
+  const { data: restaurants = [], isLoading, error } = useVendorRestaurants(shouldFetch);
 
   // Use first restaurant as default
   const activeRestaurantId = useMemo(
