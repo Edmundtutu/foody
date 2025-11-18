@@ -18,7 +18,6 @@ import type { User as UserType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useCart } from '@/context/CartContext';
 import { NotificationList } from '@/components/NotificationList';
-import { useUnreadCount } from '@/hooks/useUnreadCount';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface NavbarProps {
@@ -34,7 +33,6 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const [notificationListOpen, setNotificationListOpen] = useState(false);
 
   const cartItemCount = getItemCount();
-  const { totalUnreadCount } = useUnreadCount();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -71,22 +69,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
           {/* Desktop Actions */}
           {user ? (
             <div className="hidden lg:flex items-center space-x-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="relative h-9 w-9"
-                onClick={() => window.location.href = '/chat/conversations'}
-              >
-                <MessageCircle className="h-4 w-4" />
-                {totalUnreadCount > 0 && (
-                  <Badge 
-                    variant="destructive" 
-                    className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0"
-                  >
-                    {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
-                  </Badge>
-                )}
-              </Button>
+              {/* Chat button removed - will be re-implemented with new system */}
 
               <Button 
                 variant="ghost" 

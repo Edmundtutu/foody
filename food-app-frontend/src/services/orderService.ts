@@ -28,7 +28,6 @@ export interface Order {
   user?: import('@/types/auth').User;
   restaurant?: import('./restaurantService').Restaurant;
   items?: OrderItem[];
-  conversation?: import('./chatService').Conversation;
 }
 
 export interface CreateOrderData {

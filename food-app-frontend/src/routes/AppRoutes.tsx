@@ -11,10 +11,6 @@ import VendorLayout from '@/layouts/VendorLayout';
 import Login from '@/pages/auth/Login';
 import Register from '@/pages/auth/Register';
 
-// Chat Pages
-import { ConversationListPage } from '@/pages/chat/ConversationListPage';
-import { ChatPage } from '@/pages/chat/ChatPage';
-
 // Vendor Pages
 import VendorDashboard from '@/pages/vendor/Dashboard';
 import VendorKitchen from '@/pages/vendor/Kitchen';
@@ -146,18 +142,6 @@ const AppRoutes: React.FC = () => {
                 <Route path="/cart" element={
                     <ProtectedRoute layout="main">
                         <Cart />
-                    </ProtectedRoute>
-                } />
-
-                {/* Chat Routes */}
-                <Route path="/chat/conversations" element={
-                    <ProtectedRoute layout="main">
-                        <ConversationListPage />
-                    </ProtectedRoute>
-                } />
-                <Route path="/chat/conversation/:orderId" element={
-                    <ProtectedRoute layout="main">
-                        <ChatPage />
                     </ProtectedRoute>
                 } />
 

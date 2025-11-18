@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\ConversationResource;
 use App\Services\ChatService;
 use App\Traits\ApiResponseTrait;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ConversationController extends Controller
@@ -19,31 +20,79 @@ class ConversationController extends Controller
         $this->chatService = $chatService;
     }
 
-    public function index(Request $request)
+    /**
+     * Get or create conversation for an order
+     * 
+     * @param string $orderId
+     * @return JsonResponse
+     */
+    public function getForOrder(string $orderId): JsonResponse
     {
-        $userId = auth()->id();
-        $user = auth()->user();
-        $restaurantId = $request->query('restaurant_id');
-
-        // If restaurant_id is provided and user is a restaurant owner, filter by restaurant
-        if ($restaurantId && $user->role === 'restaurant') {
-            $conversations = $this->chatService->getRestaurantConversations($restaurantId, $userId);
-        } else {
-            $conversations = $this->chatService->getUserConversations($userId);
+        try {
+            $userId = auth()->id();
+            
+            // Try to get existing conversation
+            try {
+                $conversation = $this->chatService->getConversationForOrder($orderId, $userId);
+            } catch (\Symfony\Component\HttpKernel\Exception\NotFoundHttpException $e) {
+                // If not found, create new one
+                $conversation = $this->chatService->createConversationForOrder($orderId);
+            }
+            
+            return $this->success(new ConversationResource($conversation));
+        } catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e) {
+            return $this->error($e->getMessage(), 403);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
         }
-
-        return $this->success(ConversationResource::collection($conversations));
     }
 
-    public function show($id)
+    /**
+     * Explicitly create conversation for order (restaurant only)
+     * 
+     * @param string $orderId
+     * @return JsonResponse
+     */
+    public function store(string $orderId): JsonResponse
     {
-        $conversation = $this->chatService->getConversationById($id);
-
-        return $this->success(new ConversationResource($conversation));
+        try {
+            $user = auth()->user();
+            
+            // Only restaurants can create conversations
+            if ($user->role !== 'restaurant') {
+                return $this->error('Only restaurant managers can create conversations', 403);
+            }
+            
+            $conversation = $this->chatService->createConversationForOrder($orderId);
+            
+            return $this->success(new ConversationResource($conversation), 'Conversation created successfully', 201);
+        } catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e) {
+            return $this->error($e->getMessage(), 403);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
     }
 
-    public function store()
+    /**
+     * Mark messages as read in conversation
+     * 
+     * @param string $conversationId
+     * @return JsonResponse
+     */
+    public function markAsRead(string $conversationId): JsonResponse
     {
-        return $this->error('Conversations are created automatically with orders', 400);
+        try {
+            $userId = auth()->id();
+            $updatedCount = $this->chatService->markMessagesAsRead($conversationId, $userId);
+            
+            return $this->success([
+                'success' => true,
+                'updated_count' => $updatedCount
+            ], 'Messages marked as read');
+        } catch (\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException $e) {
+            return $this->error($e->getMessage(), 403);
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 500);
+        }
     }
 }

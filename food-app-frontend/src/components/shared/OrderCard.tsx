@@ -16,10 +16,8 @@ import CreatePostCard from '@/components/customer/profile/orders/CreatePostCard'
 import { useImageCapture } from '@/hooks/useImageCapture';
 import CameraCapture from '@/components/features/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
-import { useChat } from '@/context/ChatContext';
 import { useAuth } from '@/context/AuthContext';
-import { useUnreadCount } from '@/hooks/useUnreadCount';
-import { useOpenOrderChat } from '@/hooks/useOpenOrderChat';
+import { OrderChat } from '@/components/vendor/OrderChat';
 
 type OrderCardContext = 'customer' | 'vendor';
 
@@ -60,42 +58,24 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [hasActionCompleted, setHasActionCompleted] = useState(false);
+  const [isOrderChatOpen, setIsOrderChatOpen] = useState(false);
   const imageCapture = useImageCapture();
   const { toast } = useToast();
   const { user } = useAuth();
-  const { conversations } = useChat();
-  const { openOrderChat } = useOpenOrderChat({
-    onError: (error) => {
-      toast({
-        title: 'Chat Error',
-        description: error.message || 'Failed to open chat',
-        variant: 'destructive',
-      });
-    }
-  });
-  
-  // Find conversation for this order to get unread count
-  const conversation = conversations.find(conv => conv.order_id === String(order.id));
-  const { conversationUnreadCount } = useUnreadCount(conversation?.id);
 
   const createdAt = new Date(order.created_at);
   const deliveryType = order.delivery_address && order.delivery_address !== 'N/A for pickup' ? 'Delivery' : 'Pickup';
 
   // Check if order is in a state that allows confirm/reject actions
   const canPerformActions = order.status === 'pending';
-
-  // Handle chat button click - simplified with new hook
-  const handleChatClick = useCallback(async () => {
-    try {
-      await openOrderChat(order);
-    } catch (error) {
-      // Error already handled in hook's onError callback
-      console.error('Chat error:', error);
-    }
-  }, [order, openOrderChat]);
   
   // Check if order has completed an action (confirmed/rejected)
   const hasCompletedAction = order.status === 'processing' || order.status === 'cancelled';
+
+  // Handle chat button click
+  const handleChatClick = () => {
+    setIsOrderChatOpen(true);
+  };
 
   const handleConfirm = async () => {
     if (!onConfirm || isActionInProgress) return;
@@ -303,23 +283,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                     </>
                   )}
 
-                  {/* Chat button - behavior depends on user role */}
+                  {/* Chat button - always visible in vendor context */}
                   <button
                       type="button"
                       onClick={handleChatClick}
-                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors min-w-0 relative"
-                      title={user?.role === 'restaurant' ? "Open chat for this order" : "View conversations"}
+                      className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1 text-[10px] sm:text-xs px-2 py-1 sm:px-3 sm:py-2 rounded-md border border-blue-200 text-blue-700 hover:bg-blue-50 transition-colors min-w-0"
+                      title="Chat with customer"
                   >
                     <MessageCircle className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
                     <span className="hidden sm:inline truncate">Chat</span>
-                    {conversationUnreadCount > 0 && (
-                      <Badge 
-                        variant="destructive" 
-                        className="absolute -top-1 -right-1 h-4 w-4 p-0 text-xs flex items-center justify-center"
-                      >
-                        {conversationUnreadCount > 9 ? '9+' : conversationUnreadCount}
-                      </Badge>
-                    )}
                   </button>
                 </div>
             )}
@@ -336,7 +308,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           )}
         </CardContent>
 
-        {/* Chat Dialog removed - will be re-implemented with new system */}
+        {/* Order Chat Component */}
+        {isOrderChatOpen && (
+          <OrderChat
+            orderId={String(order.id)}
+            isOpen={isOrderChatOpen}
+            onClose={() => setIsOrderChatOpen(false)}
+            context={context === 'vendor' ? 'restaurant' : 'customer'}
+          />
+        )}
       </Card>
   );
 };
