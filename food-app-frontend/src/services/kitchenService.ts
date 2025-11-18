@@ -7,7 +7,7 @@ export interface InventoryNode {
   id: string;
   restaurant_id: string;
   category_id: string | null;
-  entity_type: 'dish' | 'modification' | 'ingredient' | 'station';
+  entity_type: 'dish' | 'modification' | 'category';
   entity_id: string;
   display_name: string | null;
   x: number;
@@ -22,6 +22,7 @@ export interface InventoryNode {
     id: string;
     name: string;
     display_order: number;
+    color_code?: string | null;
   };
 }
 
@@ -57,7 +58,7 @@ export interface KitchenGraph {
 export interface CreateNodeData {
   restaurant_id: string;
   category_id: string;
-  entity_type: 'dish' | 'modification' | 'ingredient' | 'station';
+  entity_type: 'dish' | 'modification' | 'category';
   entity_id: string;
   display_name?: string;
   x?: number;
