@@ -25,7 +25,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { Package, AlertCircle } from 'lucide-react';
-import type { Order } from '@/services/orderService';
+import type { Order } from '@/types';
 
 const VendorOrders: React.FC = () => {
   const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
@@ -178,7 +178,6 @@ const VendorOrders: React.FC = () => {
               context="vendor"
               onConfirm={handleConfirmOrder}
               onReject={handleRejectOrder}
-              onOpenConversation={() => setSelectedOrder(order)}
               onStartPost={() => {}}
               isPostDisabled={true}
             />
@@ -312,7 +311,7 @@ const VendorOrders: React.FC = () => {
                   {selectedOrder.status === 'confirmed' && (
                     <Button
                       onClick={() =>
-                        handleUpdateStatus(selectedOrder.id, 'preparing')
+                        handleUpdateStatus(selectedOrder.id, 'processing')
                       }
                       disabled={updateOrderStatusMutation.isPending}
                       className="flex-1"
@@ -320,7 +319,7 @@ const VendorOrders: React.FC = () => {
                       {updateOrderStatusMutation.isPending ? 'Starting...' : 'Start Preparing'}
                     </Button>
                   )}
-                  {selectedOrder.status === 'preparing' && (
+                  {selectedOrder.status === 'processing' && (
                     <Button
                       onClick={() =>
                         handleUpdateStatus(selectedOrder.id, 'ready')

@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Order } from '@/types/orders';
+import type { Order } from '@/types';
 import {
   MapPin,
   User as UserIcon,
@@ -16,7 +16,6 @@ import CreatePostCard from '@/components/customer/profile/orders/CreatePostCard'
 import { useImageCapture } from '@/hooks/useImageCapture';
 import CameraCapture from '@/components/features/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
 import { OrderChat } from '@/components/vendor/OrderChat';
 
 type OrderCardContext = 'customer' | 'vendor';
@@ -28,7 +27,6 @@ interface OrderCardProps {
   isPostDisabled?: boolean;
   onConfirm?: (order: Order) => Promise<void>;
   onReject?: (order: Order) => Promise<void>;
-  onOpenConversation?: (order: Order) => void;
 }
 
 const getStatusBadgeVariant = (status: Order['status']): 'default' | 'secondary' | 'destructive' => {
@@ -53,7 +51,6 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                                                       isPostDisabled,
                                                       onConfirm,
                                                       onReject,
-                                                      onOpenConversation
                                                     }) => {
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isActionInProgress, setIsActionInProgress] = useState(false);
@@ -61,16 +58,12 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const [isOrderChatOpen, setIsOrderChatOpen] = useState(false);
   const imageCapture = useImageCapture();
   const { toast } = useToast();
-  const { user } = useAuth();
 
   const createdAt = new Date(order.created_at);
   const deliveryType = order.delivery_address && order.delivery_address !== 'N/A for pickup' ? 'Delivery' : 'Pickup';
 
   // Check if order is in a state that allows confirm/reject actions
   const canPerformActions = order.status === 'pending';
-  
-  // Check if order has completed an action (confirmed/rejected)
-  const hasCompletedAction = order.status === 'processing' || order.status === 'cancelled';
 
   // Handle chat button click
   const handleChatClick = () => {
@@ -163,19 +156,19 @@ export const OrderCard: React.FC<OrderCardProps> = ({
           </div>
 
           <div className="space-y-1 sm:space-y-1.5 flex-1 mb-2 min-w-0">
-            {order.items.slice(0, 3).map((item, index) => (
+            {(order.items || []).slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center justify-between text-[10px] sm:text-xs gap-1 sm:gap-2 min-w-0">
               <span className="truncate flex-1 min-w-0 leading-tight">
                 {(item.product?.name ?? 'Item')} × {item.quantity}
               </span>
                   <span className="flex-shrink-0 font-medium text-[9px] sm:text-xs">
-                {formatUGX(item.price * item.quantity)}
+                {formatUGX(item.unit_price * item.quantity)}
               </span>
                 </div>
             ))}
-            {order.items.length > 3 && (
+            {(order.items ?? []).length > 3 && (
                 <div className="text-[9px] sm:text-xs text-muted-foreground text-center py-0.5">
-                  +{order.items.length - 3} more items
+                  +{(order.items ?? []).length - 3} more items
                 </div>
             )}
           </div>
@@ -242,7 +235,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                         <div className="w-full min-w-0">
                           <CreatePostCard
                               imageCapture={imageCapture}
-                              createContext={{ shopId: order.shop_id, productId: order.items[0]?.product_id }}
+                              createContext={{ shopId: order.restaurant_id, productId: (order.items?.[0]?.dish_id) }}
                               forceExpanded={true}
                           />
                         </div>

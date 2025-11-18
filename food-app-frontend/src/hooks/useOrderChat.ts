@@ -4,7 +4,8 @@ import { getEcho } from '@/services/realtime';
 import type { Conversation, Message, ConnectionStatus } from '@/types/chat';
 import { useToast } from './use-toast';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
 
 interface UseOrderChatState {
   conversation: Conversation | null;
@@ -59,7 +60,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       
       // Try to get existing conversation
       const response = await axios.get(
-        `${API_URL}/orders/${orderId}/conversations`,
+        `${API_URL} / ${API_VERSION}/orders/${orderId}/conversations`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -79,7 +80,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
         try {
           const token = localStorage.getItem('auth_token');
           const createResponse = await axios.post(
-            `${API_URL}/orders/${orderId}/conversations`,
+            `${API_URL} / ${API_VERSION}/orders/${orderId}/conversations`,
             {},
             {
               headers: {
@@ -170,6 +171,41 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
   }, [conversation?.id]);
 
   /**
+   * Mark all messages from other user as read
+   */
+  const markAsRead = useCallback(async () => {
+    if (!conversation?.id) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+      
+      await axios.post(
+        `${API_URL} / ${API_VERSION}/conversations/${conversation.id}/read`,
+        {},
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            Accept: 'application/json',
+          },
+        }
+      );
+      
+      // Update local messages to mark them as read
+      const userId = localStorage.getItem('user_id');
+      setMessages((prev) =>
+        prev.map(m =>
+          m.sender_id !== userId && !m.read_at
+            ? { ...m, read_at: new Date().toISOString() }
+            : m
+        )
+      );
+    } catch (err) {
+      // Silently fail - read status is not critical
+      console.error('Failed to mark messages as read:', err);
+    }
+  }, [conversation?.id]);
+
+  /**
    * Send a message in the conversation
    */
   const sendMessage = useCallback(async (content: string) => {
@@ -195,7 +231,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       const token = localStorage.getItem('auth_token');
       
       const response = await axios.post(
-        `${API_URL}/conversations/${conversation.id}/messages`,
+        `${API_URL} / ${API_VERSION}/conversations/${conversation.id}/messages`,
         { content: content.trim() },
         {
           headers: {
@@ -213,8 +249,8 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
         prev.map(m => m.id === tempId ? serverMessage : m)
       );
       
-      // Auto mark as read after sending
-      await markAsRead();
+      // Auto mark as read after sending (optional - can be deferred to component)
+      // await markAsRead();
     } catch (err) {
       // Rollback optimistic update
       setMessages((prev) => prev.filter(m => m.id !== tempId));
@@ -231,42 +267,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
     } finally {
       setIsSending(false);
     }
-  }, [conversation?.id, toast, markAsRead]);
-
-  /**
-   * Mark all messages from other user as read
-   */
-  const markAsRead = useCallback(async () => {
-    if (!conversation?.id) return;
-
-    try {
-      const token = localStorage.getItem('auth_token');
-      
-      await axios.post(
-        `${API_URL}/conversations/${conversation.id}/read`,
-        {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        }
-      );
-      
-      // Update local messages to mark them as read
-      const userId = localStorage.getItem('user_id');
-      setMessages((prev) =>
-        prev.map(m =>
-          m.sender_id !== userId && !m.read_at
-            ? { ...m, read_at: new Date().toISOString() }
-            : m
-        )
-      );
-    } catch (err) {
-      // Silently fail - read status is not critical
-      console.error('Failed to mark messages as read:', err);
-    }
-  }, [conversation?.id]);
+  }, [conversation?.id, toast]);
 
   /**
    * Retry loading conversation

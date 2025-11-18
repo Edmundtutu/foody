@@ -1,54 +1,8 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
+import type { Order, CreateOrderData, UpdateOrderStatusData, OrderFilters } from '@/types/orders';
 
 const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
-
-export interface OrderItem {
-  id: string;
-  order_id: string;
-  dish_id: string;
-  quantity: number;
-  unit_price: number;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  dish?: import('./menuService').Dish;
-}
-
-export interface Order {
-  id: string;
-  user_id: string;
-  restaurant_id: string;
-  total: number;
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-  deleted_at: string | null;
-  user?: import('@/types/auth').User;
-  restaurant?: import('./restaurantService').Restaurant;
-  items?: OrderItem[];
-}
-
-export interface CreateOrderData {
-  restaurant_id: string;
-  items: {
-    dish_id: string;
-    quantity: number;
-    unit_price: number;
-    notes?: string;
-  }[];
-  notes?: string;
-}
-
-export interface UpdateOrderStatusData {
-  status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
-}
-
-export interface OrderFilters {
-  restaurant_id?: string;
-  status?: string;
-}
 
 const orderService = {
   /**

@@ -1,9 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import orderService, {
-  type Order,
-  type OrderFilters,
-  type UpdateOrderStatusData,
-} from '@/services/orderService';
+import orderService from '@/services/orderService';
+import type { Order, OrderFilters, UpdateOrderStatusData } from '@/types';
 
 /**
  * Hook to fetch orders with optional filters
