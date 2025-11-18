@@ -42,9 +42,8 @@ type ApiNode = InventoryNode;
 type ApiEdge = InventoryNodeEdge;
 
 const nodeTypes = {
-  ingredient: IngredientNode,
-  modifier: ModifierNode,
-  product: ProductNode,
+  dish: ProductNode,
+  modification: ModifierNode,
   category: CategoryNode,
 };
 
@@ -252,13 +251,6 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
   const [selectedLayer, setSelectedLayer] = useState<string | null>(null);
   const [resizingLayer, setResizingLayer] = useState<{ layerId: string; handle: string } | null>(null);
   const [editingLayerName, setEditingLayerName] = useState<string | null>(null);
-  
-  // Dialog states for modification and addon creation
-  const [showModificationDialog, setShowModificationDialog] = useState(false);
-  const [showAddonDialog, setShowAddonDialog] = useState(false);
-  const [selectedProductForMod, setSelectedProductForMod] = useState<string>('');
-  const [modificationData, setModificationData] = useState({ name: '', cost: 0 });
-  const [addonData, setAddonData] = useState({ name: '', price: 0 });
 
   const onConnect = useCallback(
     async (params: Connection) => {
@@ -307,16 +299,6 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
   );
 
   const addNode = useCallback(async (type: string) => {
-    // Handle special cases for modification and addon
-    if (type === 'modifier') {
-      setShowModificationDialog(true);
-      return;
-    }
-    if (type === 'addon') {
-      setShowAddonDialog(true);
-      return;
-    }
-
     const pos = { x: Math.round(Math.random() * 400 + 100), y: Math.round(Math.random() * 200 + 300) };
     // optimistic local
     const tempId = `${type}-${Date.now()}`;
@@ -326,11 +308,10 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
     try {
       let categoryId: string;
       let entityId: string;
-      let entityType: 'dish' | 'modification' | 'ingredient' | 'station' = 'dish';
+      let entityType: 'dish' | 'modification' | 'category' = 'dish';
       const defaultData = newNode.data as any;
 
       // Get or create a default category for this restaurant
-      // For now, we'll fetch categories and use the first one, or create a default one
       const categories = await menuService.getMenuCategories(shopId);
       if (categories.length > 0) {
         categoryId = categories[0].id;
@@ -344,7 +325,7 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
         categoryId = newCategory.id;
       }
 
-      // Map node type to entity type
+      // Map node type to entity type and create the actual entity
       if (type === 'category') {
         // Create menu category first
         const createdCategory = await menuService.createMenuCategory({
@@ -355,25 +336,26 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
         });
         categoryId = createdCategory.id;
         entityId = createdCategory.id;
-        entityType = 'dish'; // Categories are represented as nodes with entity_type='dish'
-      } else if (type === 'product' || type === 'dish') {
-        // For Phase 1, create a simple dish
+        entityType = 'category';
+      } else if (type === 'dish' || type === 'product') {
+        // Create a dish entity
         const createdDish = await menuService.createDish({
           restaurant_id: shopId,
           category_id: categoryId,
           name: defaultData.label ?? 'New Dish',
           description: defaultData.description,
-          price: defaultData.basePrice ? Math.round(defaultData.basePrice * 100) : 0, // Convert to UGX (cents)
+          price: defaultData.basePrice ? Math.round(defaultData.basePrice * 100) : 0,
           available: defaultData.available ?? true,
           images: defaultData.image ? [defaultData.image] : [],
         });
         entityId = createdDish.id;
         entityType = 'dish';
       } else {
-        // For ingredient, station, modifier - use a temporary entity_id
-        // In a full implementation, these would create their respective entities
-        entityId = `temp-${type}-${Date.now()}`;
-        entityType = type === 'ingredient' ? 'ingredient' : type === 'station' ? 'station' : 'modification';
+        // For now, modifications/modifiers will be skipped - they should be created via dish options
+        // and then nodes created to reference existing options
+        console.warn('Modification nodes should be created via dish options');
+        setNodes((nds) => nds.filter(n => n.id !== tempId));
+        return;
       }
 
       // Create the inventory node
@@ -422,12 +404,11 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
     if (zone === 'all') return nodes;
     return nodes.filter(node => {
       if (zone === 'categories' && node.type === 'category') return true;
-      if (zone === 'products' && node.type === 'product') return true;
-      if (zone === 'ingredients' && node.type === 'ingredient') return true;
-      if (zone === 'modifiers' && node.type === 'modifier') return true;
+      if (zone === 'dishes' && (node.type === 'dish' || node.type === 'product')) return true;
+      if (zone === 'modifications' && (node.type === 'modification' || node.type === 'modifier')) return true;
       return false;
     });
-  }, [nodes, activeZone]);
+  }, [nodes]);
 
   const filteredNodes = useMemo(() => {
     const zoneNodes = getZoneNodes(activeZone);
@@ -442,24 +423,15 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
   }, [nodes, activeZone, collapsedSections, getZoneNodes, toggleSectionCollapse]);
 
   const stats = useMemo(() => {
-    const products = nodes.filter(n => n.type === 'product');
-    const ingredients = nodes.filter(n => n.type === 'ingredient');
-    const lowStockItems = ingredients.filter(n => 
-      typeof n.data.stock === 'number' && 
-      typeof n.data.lowStockThreshold === 'number' && 
-      n.data.stock <= n.data.lowStockThreshold
-    );
-    const totalValue = ingredients.reduce((sum, n) => {
-      const stock = typeof n.data.stock === 'number' ? n.data.stock : 0;
-      const cost = typeof n.data.cost === 'number' ? n.data.cost : 0;
-      return sum + (stock * cost);
-    }, 0);
+    const dishes = nodes.filter(n => n.type === 'dish' || n.type === 'product');
+    const modifications = nodes.filter(n => n.type === 'modification' || n.type === 'modifier');
+    const categories = nodes.filter(n => n.type === 'category');
     
     return {
-      totalProducts: products.length,
-      totalIngredients: ingredients.length,
-      lowStockItems: lowStockItems.length,
-      totalValue: totalValue
+      totalDishes: dishes.length,
+      totalModifications: modifications.length,
+      totalCategories: categories.length,
+      totalNodes: nodes.length
     };
   }, [nodes]);
 
@@ -710,8 +682,7 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
           <div className="absolute inset-0 z-0 pointer-events-none">
             <div className={`h-full w-full ${
               activeZone === 'categories' ? 'bg-gradient-to-br from-violet-500/10 to-violet-300/5' :
-              activeZone === 'products' ? 'bg-gradient-to-br from-blue-500/10 to-blue-300/5' :
-              activeZone === 'ingredients' ? 'bg-gradient-to-br from-emerald-500/10 to-emerald-300/5' :
+              activeZone === 'dishes' ? 'bg-gradient-to-br from-blue-500/10 to-blue-300/5' :
               'bg-gradient-to-br from-amber-500/10 to-amber-300/5'
             }`} />
           </div>
@@ -770,8 +741,9 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
               className="bg-card/90 backdrop-blur-sm border border-border rounded-lg"
               nodeColor={(node) => {
                 switch (node.type) {
+                  case 'dish':
                   case 'product': return '#3B82F6';
-                  case 'ingredient': return '#10B981';
+                  case 'modification':
                   case 'modifier': return '#F59E0B';
                   case 'category': return '#8B5CF6';
                   default: return '#6B7280';
@@ -920,9 +892,8 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
                     {[
                       { key: 'all', label: 'All Items', icon: Grid3X3 },
                       { key: 'categories', label: 'Categories', icon: Layers },
-                      { key: 'products', label: 'Products', icon: Eye },
-                      { key: 'ingredients', label: 'Ingredients', icon: Eye },
-                      { key: 'modifiers', label: 'Modifiers', icon: Eye }
+                      { key: 'dishes', label: 'Dishes', icon: Eye },
+                      { key: 'modifications', label: 'Modifications', icon: Eye }
                     ].map(({ key, label, icon: Icon }) => (
                       <Button
                         key={key}
@@ -941,7 +912,7 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
                 <div className="space-y-3">
                   <h3 className="font-semibold text-sm">Section Controls</h3>
                   <div className="grid grid-cols-1 gap-1">
-                    {['category', 'product', 'ingredient', 'modifier'].map((type) => (
+                    {['category', 'dish', 'modification'].map((type) => (
                       <Button
                         key={type}
                         variant="ghost"
@@ -954,7 +925,7 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
                         ) : (
                           <Eye className="h-3 w-3 mr-2" />
                         )}
-                        {type.charAt(0).toUpperCase() + type.slice(1)}s
+                        {type.charAt(0).toUpperCase() + type.slice(1)}{type === 'category' ? 'ies' : 's'}
                       </Button>
                     ))}
                   </div>
@@ -1019,223 +990,6 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
         </div>
       </div>
     )}
-    {/* Modification Creation Dialog */}
-    <Dialog open={showModificationDialog} onOpenChange={setShowModificationDialog}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Modification</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="product-select">Product</Label>
-            <Select value={selectedProductForMod} onValueChange={setSelectedProductForMod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product" />
-              </SelectTrigger>
-              <SelectContent>
-                {nodes.filter(n => n.type === 'product').map(product => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {(product.data as any)?.label || 'Unnamed Product'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="mod-name">Name</Label>
-            <Input
-              id="mod-name"
-              value={modificationData.name}
-              onChange={(e) => setModificationData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Extra Spicy"
-            />
-          </div>
-          <div>
-            <Label htmlFor="mod-cost">Cost</Label>
-            <Input
-              id="mod-cost"
-              type="number"
-              step="0.01"
-              value={modificationData.cost}
-              onChange={(e) => setModificationData(prev => ({ ...prev, cost: parseFloat(e.target.value) || 0 }))}
-              placeholder="0.00"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={async () => {
-                if (!selectedProductForMod || !modificationData.name) return;
-                
-                try {
-                  // Create the modification entity
-                  const productEntityId = (nodes.find(n => n.id === selectedProductForMod) as any)?.data?.entity_id ?? selectedProductForMod;
-                  const createdMod = await modificationService.create(productEntityId, modificationData.name, modificationData.cost);
-                  
-                  // Create the Inventory node
-                  const pos = { x: Math.round(Math.random() * 400 + 100), y: Math.round(Math.random() * 200 + 300) };
-                  const tempId = `modifier-${Date.now()}`;
-                  const newNode: Node = { 
-                    id: tempId, 
-                    type: 'modifier', 
-                    position: pos, 
-                    data: { 
-                      label: modificationData.name,
-                      cost: modificationData.cost,
-                      entity_id: createdMod.id
-                    } 
-                  };
-                  setNodes((nds) => nds.concat(newNode));
-                  
-                  const createdNode = await inventoryService.createNode(shopId, 'modification', pos.x, pos.y, { 
-                    label: modificationData.name,
-                    cost: modificationData.cost,
-                    entity_id: createdMod.id
-                  });
-                  
-                  // Replace temp with server id
-                  setNodes((nds) => nds.map(n => n.id === tempId ? mapApiNodeToFlow(createdNode) : n));
-                  
-                  // Create edge to product
-                  const edgeTempId = `e-${createdNode.id}-${selectedProductForMod}`;
-                  const optimisticEdge: Edge = {
-                    id: edgeTempId,
-                    source: createdNode.id,
-                    target: selectedProductForMod,
-                    type: 'price',
-                    data: { relationship: 'modifies' }
-                  } as Edge;
-                  setEdges((eds) => addEdge(optimisticEdge, eds));
-                  
-                  await inventoryService.createEdge(shopId, createdNode.id, selectedProductForMod, null, { relationship: 'modifies' });
-                  
-                  // Reset form
-                  setModificationData({ name: '', cost: 0 });
-                  setSelectedProductForMod('');
-                  setShowModificationDialog(false);
-                } catch (e) {
-                  console.error('Failed to create modification:', e);
-                }
-              }}
-              disabled={!selectedProductForMod || !modificationData.name}
-            >
-              Create Modification
-            </Button>
-            <Button variant="outline" onClick={() => setShowModificationDialog(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-
-    {/* Addon Creation Dialog */}
-    <Dialog open={showAddonDialog} onOpenChange={setShowAddonDialog}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Create Addon</DialogTitle>
-        </DialogHeader>
-        <div className="space-y-4">
-          <div>
-            <Label htmlFor="addon-product-select">Product</Label>
-            <Select value={selectedProductForMod} onValueChange={setSelectedProductForMod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product" />
-              </SelectTrigger>
-              <SelectContent>
-                {nodes.filter(n => n.type === 'product').map(product => (
-                  <SelectItem key={product.id} value={product.id}>
-                    {(product.data as any)?.label || 'Unnamed Product'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <Label htmlFor="addon-name">Name</Label>
-            <Input
-              id="addon-name"
-              value={addonData.name}
-              onChange={(e) => setAddonData(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="e.g., Extra Cheese"
-            />
-          </div>
-          <div>
-            <Label htmlFor="addon-price">Price</Label>
-            <Input
-              id="addon-price"
-              type="number"
-              step="0.01"
-              value={addonData.price}
-              onChange={(e) => setAddonData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
-              placeholder="0.00"
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button 
-              onClick={async () => {
-                if (!selectedProductForMod || !addonData.name) return;
-                
-                try {
-                  // Create the addon entity
-                  const productEntityId = (nodes.find(n => n.id === selectedProductForMod) as any)?.data?.entity_id ?? selectedProductForMod;
-                  const createdAddon = await addonService.create(productEntityId, addonData.name, addonData.price);
-                  
-                  // Create the Inventory node
-                  const pos = { x: Math.round(Math.random() * 400 + 100), y: Math.round(Math.random() * 200 + 300) };
-                  const tempId = `addon-${Date.now()}`;
-                  const newNode: Node = { 
-                    id: tempId, 
-                    type: 'addon', 
-                    position: pos, 
-                    data: { 
-                      label: addonData.name,
-                      price: addonData.price,
-                      entity_id: createdAddon.id
-                    } 
-                  };
-                  setNodes((nds) => nds.concat(newNode));
-                  
-                  const createdNode = await inventoryService.createNode(shopId, 'addon', pos.x, pos.y, { 
-                    label: addonData.name,
-                    price: addonData.price,
-                    entity_id: createdAddon.id
-                  });
-                  
-                  // Replace temp with server id
-                  setNodes((nds) => nds.map(n => n.id === tempId ? mapApiNodeToFlow(createdNode) : n));
-                  
-                  // Create edge to product
-                  const edgeTempId = `e-${createdNode.id}-${selectedProductForMod}`;
-                  const optimisticEdge: Edge = {
-                    id: edgeTempId,
-                    source: createdNode.id,
-                    target: selectedProductForMod,
-                    type: 'price',
-                    data: { relationship: 'adds' }
-                  } as Edge;
-                  setEdges((eds) => addEdge(optimisticEdge, eds));
-                  
-                  await inventoryService.createEdge(shopId, createdNode.id, selectedProductForMod, null, { relationship: 'adds' });
-                  
-                  // Reset form
-                  setAddonData({ name: '', price: 0 });
-                  setSelectedProductForMod('');
-                  setShowAddonDialog(false);
-                } catch (e) {
-                  console.error('Failed to create addon:', e);
-                }
-              }}
-              disabled={!selectedProductForMod || !addonData.name}
-            >
-              Create Addon
-            </Button>
-            <Button variant="outline" onClick={() => setShowAddonDialog(false)}>
-              Cancel
-            </Button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
 
     {/* Close main container div */}
   </div>
@@ -1244,24 +998,18 @@ export function DynamicInventoryFlow({ shopId, initialGraph }: Props) {
 
 function getDefaultNodeData(type: string) {
   switch (type) {
+    case 'dish':
     case 'product':
       return {
-        label: 'New Product',
+        label: 'New Dish',
         basePrice: 10.00,
         image: '🍽️',
         available: true
       };
-    case 'ingredient':
-      return {
-        label: 'New Ingredient',
-        stock: 50,
-        unit: 'units',
-        cost: 1.00,
-        lowStockThreshold: 10
-      };
+    case 'modification':
     case 'modifier':
       return {
-        label: 'New Modifier',
+        label: 'New Modification',
         priceChange: 1.00,
         type: 'addon'
       };
@@ -1280,7 +1028,8 @@ function mapApiNodeToFlow(n: ApiNode): Node {
   const data: any = {
     label: n.display_name ?? n.metadata?.label ?? n.entity_type,
     color: n.color_code ?? n.metadata?.color,
-    image: n.icon ?? n.metadata?.image,
+    image: n.metadata?.image,
+    available: n.available,
     ...n.metadata,
   };
   return {

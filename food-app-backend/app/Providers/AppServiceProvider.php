@@ -3,10 +3,13 @@
 namespace App\Providers;
 
 use App\Models\Dish;
+use App\Models\InventoryNode;
+use App\Models\InventoryNodeEdge;
 use App\Models\MenuCategory;
 use App\Models\Order;
 use App\Models\Restaurant;
 use App\Policies\DishPolicy;
+use App\Policies\KitchenPolicy;
 use App\Policies\MenuCategoryPolicy;
 use App\Policies\OrderPolicy;
 use App\Policies\RestaurantPolicy;
@@ -34,6 +37,8 @@ class AppServiceProvider extends AuthServiceProvider
         Gate::policy(MenuCategory::class, MenuCategoryPolicy::class);
         Gate::policy(Dish::class, DishPolicy::class);
         Gate::policy(Order::class, OrderPolicy::class);
+        Gate::policy(InventoryNode::class, KitchenPolicy::class);
+        Gate::policy(InventoryNodeEdge::class, KitchenPolicy::class);
 
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
             return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";

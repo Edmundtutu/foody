@@ -20,7 +20,7 @@ class InventoryNodeFactory extends Factory
         return [
             'restaurant_id' => Restaurant::factory(),
             'category_id' => null,
-            'entity_type' => fake()->randomElement(['ingredient', 'dish', 'station', 'modification']),
+            'entity_type' => fake()->randomElement(['dish', 'modification', 'category']),
             'entity_id' => fake()->uuid(),
             'display_name' => fake()->words(2, true),
             'x' => fake()->numberBetween(10, 800),
@@ -46,25 +46,25 @@ class InventoryNodeFactory extends Factory
     }
 
     /**
-     * Indicate that the node represents an ingredient.
+     * Indicate that the node represents a modification.
      */
-    public function ingredient($ingredientId, $displayName): static
+    public function modification($modificationId, $displayName): static
     {
         return $this->state(fn (array $attributes) => [
-            'entity_type' => 'ingredient',
-            'entity_id' => $ingredientId,
+            'entity_type' => 'modification',
+            'entity_id' => $modificationId,
             'display_name' => $displayName,
         ]);
     }
 
     /**
-     * Indicate that the node represents a station.
+     * Indicate that the node represents a category.
      */
-    public function station($stationId, $displayName): static
+    public function category($categoryId, $displayName): static
     {
         return $this->state(fn (array $attributes) => [
-            'entity_type' => 'station',
-            'entity_id' => $stationId,
+            'entity_type' => 'category',
+            'entity_id' => $categoryId,
             'display_name' => $displayName,
         ]);
     }
