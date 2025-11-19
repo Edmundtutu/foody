@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Store, AlertCircle } from 'lucide-react';
+import { Store } from 'lucide-react';
 import { toast } from 'sonner';
 import { ProfileFormSkeleton } from '@/components/vendor/LoadingSkeletons';
 

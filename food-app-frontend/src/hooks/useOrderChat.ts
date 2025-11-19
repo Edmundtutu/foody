@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import axios from 'axios';
+import api from '@/services/api';
 import { getEcho } from '@/services/realtime';
 import type { Conversation, Message, ConnectionStatus } from '@/types/chat';
 import { useToast } from './use-toast';
 
-const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
+const buildApiUrl = (path: string) => `/api/${API_VERSION}${path}`;
 
 interface UseOrderChatState {
   conversation: Conversation | null;
@@ -49,6 +49,7 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       setIsLoading(false);
       setConversation(null);
       setMessages([]);
+      setConnectionStatus('disconnected');
       return;
     }
 
@@ -56,17 +57,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
     setError(null);
 
     try {
-      const token = localStorage.getItem('auth_token');
-      
       // Try to get existing conversation
-      const response = await axios.get(
-        `${API_URL} / ${API_VERSION}/orders/${orderId}/conversations`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        }
+      const response = await api.get(
+        buildApiUrl(`/orders/${orderId}/conversations`),
       );
 
       const conversationData = response.data.data;
@@ -78,16 +71,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
       if (error.response?.status === 404) {
         // Conversation doesn't exist, create it
         try {
-          const token = localStorage.getItem('auth_token');
-          const createResponse = await axios.post(
-            `${API_URL} / ${API_VERSION}/orders/${orderId}/conversations`,
+          const createResponse = await api.post(
+            buildApiUrl(`/orders/${orderId}/conversations`),
             {},
-            {
-              headers: {
-                Authorization: `Bearer ${token}`,
-                Accept: 'application/json',
-              },
-            }
           );
 
           const conversationData = createResponse.data.data;
@@ -130,40 +116,44 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
    * Subscribe to real-time message updates via Laravel Echo
    */
   const subscribeToConversation = useCallback(() => {
-    if (!conversation?.id) return;
+    if (!conversation?.id) {
+      setConnectionStatus('disconnected');
+      return;
+    }
 
     try {
       const echo = getEcho();
-      
-      // Unsubscribe from previous channel if exists
+
       if (echoChannelRef.current) {
         echo.leave(echoChannelRef.current);
       }
 
       const channelName = `conversation.${conversation.id}`;
       echoChannelRef.current = channelName;
+      setConnectionStatus('disconnected');
 
-      echo.private(channelName)
-        .listen('MessageSent', (event: { message: Message }) => {
-          const newMessage = event.message;
-          
-          setMessages((prevMessages) => {
-            // Check if message already exists (avoid duplicates)
-            const exists = prevMessages.some(m => m.id === newMessage.id);
-            if (exists) {
-              return prevMessages;
-            }
-            
-            // Add new message
-            return [...prevMessages, newMessage];
-          });
-        })
-        .error((error: unknown) => {
-          console.error('Echo channel error:', error);
-          setConnectionStatus('error');
+      const channel = echo.private(channelName);
+
+      channel.listen('MessageSent', (event: { message: Message }) => {
+        const newMessage = event.message;
+
+        setMessages((prevMessages) => {
+          const exists = prevMessages.some((m) => m.id === newMessage.id);
+          if (exists) {
+            return prevMessages;
+          }
+          return [...prevMessages, newMessage];
         });
+      });
 
-      setConnectionStatus('connected');
+      channel.subscribed(() => {
+        setConnectionStatus('connected');
+      });
+
+      channel.error((error: unknown) => {
+        console.error('Echo channel error:', error);
+        setConnectionStatus('error');
+      });
     } catch (err) {
       console.error('Failed to subscribe to Echo:', err);
       setConnectionStatus('error');
@@ -177,17 +167,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
     if (!conversation?.id) return;
 
     try {
-      const token = localStorage.getItem('auth_token');
-      
-      await axios.post(
-        `${API_URL} / ${API_VERSION}/conversations/${conversation.id}/read`,
+      await api.post(
+        buildApiUrl(`/conversations/${conversation.id}/read`),
         {},
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-          },
-        }
       );
       
       // Update local messages to mark them as read
@@ -228,18 +210,9 @@ export function useOrderChat(orderId: string | null): UseOrderChat {
     setMessages((prev) => [...prev, tempMessage]);
 
     try {
-      const token = localStorage.getItem('auth_token');
-      
-      const response = await axios.post(
-        `${API_URL} / ${API_VERSION}/conversations/${conversation.id}/messages`,
+      const response = await api.post(
+        buildApiUrl(`/conversations/${conversation.id}/messages`),
         { content: content.trim() },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            Accept: 'application/json',
-            'Content-Type': 'application/json',
-          },
-        }
       );
 
       const serverMessage = response.data.data;

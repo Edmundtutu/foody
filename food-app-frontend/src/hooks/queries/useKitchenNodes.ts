@@ -1,8 +1,6 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import kitchenService, {
-  CreateNodeData,
-  MoveNodeData,
-} from '@/services/kitchenService';
+import kitchenService from '@/services/kitchenService';
+import type { CreateNodeData, MoveNodeData } from '@/services/kitchenService';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateNode() {
@@ -83,7 +81,7 @@ export function useDeleteNode() {
 
   return useMutation({
     mutationFn: (nodeId: string) => kitchenService.deleteNode(nodeId),
-    onSuccess: (_, nodeId) => {
+    onSuccess: () => {
       // Invalidate all kitchen graph queries since we don't know which restaurant
       queryClient.invalidateQueries({ queryKey: ['kitchen', 'graph'] });
       toast({

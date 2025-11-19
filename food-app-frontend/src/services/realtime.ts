@@ -25,13 +25,15 @@ export function getEcho(): any {
   
   // Extract the base URL without /api/v1
   const baseUrl = apiUrl.replace(/\/api\/v1\/?$/, '');
+  const wsHost = import.meta.env.VITE_REVERB_HOST || window.location.hostname;
+  const wsPort = import.meta.env.VITE_REVERB_PORT ? parseInt(import.meta.env.VITE_REVERB_PORT, 10) : 8081;
 
   echoInstance = new Echo({
     broadcaster: 'reverb',
-    key: import.meta.env.VITE_REVERB_APP_KEY ,
-    wsHost: import.meta.env.VITE_REVERB_HOST,
-    wsPort: import.meta.env.VITE_REVERB_PORT ? parseInt(import.meta.env.VITE_REVERB_PORT) : 8080,
-    wssPort: import.meta.env.VITE_REVERB_PORT ? parseInt(import.meta.env.VITE_REVERB_PORT) : 8080,
+    key: import.meta.env.VITE_REVERB_APP_KEY,
+    wsHost,
+    wsPort,
+    wssPort: wsPort,
     forceTLS: (import.meta.env.VITE_REVERB_SCHEME || 'http') === 'https',
     enabledTransports: ['ws', 'wss'],
     disableStats: true,
