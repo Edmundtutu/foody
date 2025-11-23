@@ -5,7 +5,7 @@ import type { Conversation, Message, ConnectionStatus } from '@/types/chat';
 import { useToast } from './use-toast';
 
 const API_VERSION = import.meta.env.VITE_API_VERSION || 'v1';
-const buildApiUrl = (path: string) => `/api/${API_VERSION}${path}`;
+const buildApiUrl = (path: string) => `/${API_VERSION}${path}`;
 
 interface UseOrderChatState {
   conversation: Conversation | null;

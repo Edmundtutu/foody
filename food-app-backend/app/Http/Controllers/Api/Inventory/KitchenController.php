@@ -64,8 +64,8 @@ class KitchenController extends Controller
             'display_name' => 'nullable|string',
             'x' => 'nullable|integer',
             'y' => 'nullable|integer',
-            'x_position' => 'nullable|integer',
-            'y_position' => 'nullable|integer',
+            'x_position' => 'nullable',//|integer',
+            'y_position' => 'nullable',//|integer',
             'color_code' => 'nullable|string|max:10',
             'available' => 'nullable|boolean',
             'metadata' => 'nullable|array',
@@ -110,8 +110,8 @@ class KitchenController extends Controller
         $validated = $request->validate([
             'x' => 'nullable|integer',
             'y' => 'nullable|integer',
-            'x_position' => 'nullable|integer',
-            'y_position' => 'nullable|integer',
+            'x_position' => 'nullable',//|integer',
+            'y_position' => 'nullable',//|integer',
         ]);
 
         $node = InventoryNode::findOrFail($nodeId);
