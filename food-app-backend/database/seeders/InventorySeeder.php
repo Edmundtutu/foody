@@ -42,7 +42,7 @@ class InventorySeeder extends Seeder
                 foreach ($dishOptions as $option) {
                     $optionNode = InventoryNode::factory()->create([
                         'restaurant_id' => $restaurant->id,
-                        'entity_type' => 'ingredient',
+                        'entity_type' => 'modification',
                         'entity_id' => $option->id,
                         'display_name' => $option->name,
                         'x' => rand(50, 950),
