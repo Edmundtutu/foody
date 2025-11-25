@@ -154,7 +154,7 @@ const VendorDashboard: React.FC = () => {
             </Button>
             <Button asChild variant="outline" className="justify-between">
               <Link to="/vendor/kitchen">
-                Kitchen Graph
+                Kitchen Layout
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>

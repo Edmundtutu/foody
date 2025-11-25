@@ -43,7 +43,7 @@ const VendorKitchen: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Kitchen Graph</h1>
+          <h1 className="text-3xl font-bold">Kitchen Layout</h1>
         </div>
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -61,7 +61,7 @@ const VendorKitchen: React.FC = () => {
     return (
       <div className="space-y-6">
         <div className="flex items-center justify-between">
-          <h1 className="text-3xl font-bold">Kitchen Graph</h1>
+          <h1 className="text-3xl font-bold">Kitchen Layout</h1>
         </div>
         <Card className="border-destructive/50 bg-destructive/5">
           <CardContent className="flex flex-col items-center justify-center py-12">
@@ -86,7 +86,7 @@ const VendorKitchen: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Kitchen Graph</h1>
+          <h1 className="text-3xl font-bold">Kitchen Layout</h1>
           <p className="text-muted-foreground mt-1">Visualize and manage your menu structure</p>
         </div>
         <Button disabled={!restaurantId} onClick={handleJumpToCreate}>

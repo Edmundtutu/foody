@@ -45,7 +45,7 @@ class DishFactory extends Factory
             'unit' => fake()->randomElement(['plate', 'piece', 'bowl', 'serving']),
             'available' => fake()->boolean(85),
             'images' => json_encode([
-                '/images/dishes/' . fake()->numberBetween(1, 10) . '.jpg',
+                'https://loremflickr.com/960/640/food?lock=' . fake()->numberBetween(1, 999999),
             ]),
             'tags' => json_encode(
                 fake()->randomElements(

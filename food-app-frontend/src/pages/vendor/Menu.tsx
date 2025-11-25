@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -39,6 +39,10 @@ import {
   Package,
   AlertCircle,
   ChefHat,
+  Upload,
+  X,
+  Star,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { useVendor } from '@/context/VendorContext';
 import {
@@ -59,11 +63,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { MenuCategory, Dish } from '@/services/menuService';
 import kitchenService from '@/services/kitchenService';
+import uploadService from '@/services/uploadService';
 
 interface CategoryFormData {
   name: string;
   description?: string;
   display_order?: number;
+  color_code?: string;
 }
 
 interface DishFormData {
@@ -74,7 +80,26 @@ interface DishFormData {
   unit?: string;
   available: boolean;
   addToKitchen?: boolean;
+  images?: string[];
 }
+
+// Helper function to get full image URL
+// Backend should return absolute URLs like http://localhost:8000/storage/dishes/... or https://domain.com/storage/dishes/...
+const getImageUrl = (url: string | null | undefined): string | null => {
+  if (!url) return null;
+  // If URL is already absolute (starts with http:// or https://), use it directly
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  // If relative URL (shouldn't happen if backend is correct, but handle as fallback)
+  // Only prepend if it's a relative path starting with /storage
+  if (url.startsWith('/storage/')) {
+    const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    return `${apiBaseUrl}${url}`;
+  }
+  // If it's a malformed URL or just a path, return null to avoid broken images
+  return null;
+};
 
 const VendorMenu: React.FC = () => {
   const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
@@ -83,6 +108,9 @@ const VendorMenu: React.FC = () => {
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const [dishImages, setDishImages] = useState<string[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Fetch categories and dishes
   const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useMenuCategories(
@@ -122,6 +150,7 @@ const VendorMenu: React.FC = () => {
       name: '',
       description: '',
       display_order: 0,
+      color_code: '#3b82f6', // Default blue color
     },
   });
 
@@ -135,6 +164,7 @@ const VendorMenu: React.FC = () => {
       unit: '',
       available: true,
       addToKitchen: false,
+      images: [],
     },
   });
 
@@ -145,6 +175,7 @@ const VendorMenu: React.FC = () => {
       name: category.name,
       description: category.description || '',
       display_order: category.display_order,
+      color_code: category.color_code || '#3b82f6',
     });
     setCategoryDialogOpen(true);
   };
@@ -152,6 +183,8 @@ const VendorMenu: React.FC = () => {
   // Open dish dialog for editing
   const handleEditDish = (dish: Dish) => {
     setEditingDish(dish);
+    const existingImages = dish.images || [];
+    setDishImages(existingImages);
     dishForm.reset({
       name: dish.name,
       description: dish.description || '',
@@ -160,6 +193,7 @@ const VendorMenu: React.FC = () => {
       unit: dish.unit || '',
       available: dish.available,
       addToKitchen: false,
+      images: existingImages,
     });
     setDishDialogOpen(true);
   };
@@ -196,6 +230,51 @@ const VendorMenu: React.FC = () => {
     }
   };
 
+  // Handle image upload
+  const handleImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const remainingSlots = Math.max(0, 8 - dishImages.length);
+    const filesToUpload = fileArray.slice(0, remainingSlots);
+
+    if (filesToUpload.length === 0) {
+      toast.error('Maximum 8 images allowed');
+      return;
+    }
+
+    setUploadingImages(true);
+    try {
+      const uploadedFiles = await uploadService.uploadDishImages(filesToUpload);
+      const newUrls = uploadedFiles.map((file) => file.url);
+      const updatedImages = [...dishImages, ...newUrls];
+      setDishImages(updatedImages);
+      dishForm.setValue('images', updatedImages);
+      toast.success(`${uploadedFiles.length} image(s) uploaded successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload images');
+    } finally {
+      setUploadingImages(false);
+    }
+  };
+
+  // Remove image
+  const handleRemoveImage = (index: number) => {
+    const updatedImages = dishImages.filter((_, i) => i !== index);
+    setDishImages(updatedImages);
+    dishForm.setValue('images', updatedImages);
+  };
+
+  // Set hero image (move to first position)
+  const handleSetHeroImage = (index: number) => {
+    if (index === 0) return; // Already hero
+    const updatedImages = [...dishImages];
+    const [heroImage] = updatedImages.splice(index, 1);
+    updatedImages.unshift(heroImage);
+    setDishImages(updatedImages);
+    dishForm.setValue('images', updatedImages);
+  };
+
   // Handle dish form submission
   const onDishSubmit = async (data: DishFormData) => {
     if (!restaurantId) {
@@ -205,20 +284,20 @@ const VendorMenu: React.FC = () => {
 
     try {
       let createdDish: Dish;
+      const submitData = {
+        ...data,
+        images: dishImages.length > 0 ? dishImages : undefined,
+        restaurant_id: restaurantId,
+      };
+      
       if (editingDish) {
         createdDish = await updateDishMutation.mutateAsync({
           dishId: editingDish.id,
-          data: {
-            ...data,
-            restaurant_id: restaurantId,
-          },
+          data: submitData,
         });
         toast.success('Dish updated successfully');
       } else {
-        createdDish = await createDishMutation.mutateAsync({
-          ...data,
-          restaurant_id: restaurantId,
-        });
+        createdDish = await createDishMutation.mutateAsync(submitData);
         toast.success('Dish created successfully');
 
         // Optionally add to kitchen graph
@@ -251,6 +330,7 @@ const VendorMenu: React.FC = () => {
       }
       setDishDialogOpen(false);
       setEditingDish(null);
+      setDishImages([]);
       dishForm.reset();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save dish');
@@ -432,6 +512,34 @@ const VendorMenu: React.FC = () => {
                       </FormItem>
                     )}
                   />
+                  <FormField
+                    control={categoryForm.control}
+                    name="color_code"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Color</FormLabel>
+                        <FormControl>
+                          <div className="flex items-center gap-3">
+                            <Input
+                              type="color"
+                              {...field}
+                              className="h-10 w-20 cursor-pointer"
+                            />
+                            <Input
+                              type="text"
+                              {...field}
+                              placeholder="#3b82f6"
+                              className="flex-1"
+                            />
+                          </div>
+                        </FormControl>
+                        <FormDescription>
+                          Choose a color to make this category visually distinct
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <DialogFooter>
                     <Button
                       type="button"
@@ -455,12 +563,27 @@ const VendorMenu: React.FC = () => {
               setDishDialogOpen(open);
               if (!open) {
                 setEditingDish(null);
+                setDishImages([]);
                 dishForm.reset();
               }
             }}
           >
             <DialogTrigger asChild>
-              <Button>
+              <Button
+                onClick={() => {
+                  setDishImages([]);
+                  dishForm.reset({
+                    name: '',
+                    description: '',
+                    category_id: '',
+                    price: 0,
+                    unit: '',
+                    available: true,
+                    addToKitchen: false,
+                    images: [],
+                  });
+                }}
+              >
                 <Plus className="h-4 w-4 mr-2" />
                 Add Dish
               </Button>
@@ -619,6 +742,110 @@ const VendorMenu: React.FC = () => {
                       )}
                     />
                   )}
+                  
+                  {/* Images Section */}
+                  <div className="space-y-2">
+                    <FormLabel>Images</FormLabel>
+                    <FormDescription>
+                      Upload up to 8 images. The first image will be used as the hero image.
+                    </FormDescription>
+                    
+                    {/* Image Upload Area */}
+                    <div
+                      className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
+                      onClick={() => fileInputRef.current?.click()}
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.add('border-primary');
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('border-primary');
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.currentTarget.classList.remove('border-primary');
+                        handleImageUpload(e.dataTransfer.files);
+                      }}
+                    >
+                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Click to upload or drag and drop
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        PNG, JPG, WEBP up to 5MB each
+                      </p>
+                    </div>
+                    
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      onChange={(e) => handleImageUpload(e.target.files)}
+                      className="hidden"
+                      disabled={uploadingImages || dishImages.length >= 8}
+                    />
+                    
+                    {/* Image Preview Grid */}
+                    {dishImages.length > 0 && (
+                      <div className="grid grid-cols-4 gap-2 mt-4">
+                        {dishImages.map((imageUrl, index) => (
+                          <div
+                            key={index}
+                            className="relative group aspect-square rounded-lg overflow-hidden border-2 border-border"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`Dish image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
+                              {index === 0 && (
+                                <Badge variant="default" className="absolute top-1 left-1">
+                                  <Star className="h-3 w-3 mr-1" />
+                                  Hero
+                                </Badge>
+                              )}
+                              {index !== 0 && (
+                                <Button
+                                  type="button"
+                                  size="icon"
+                                  variant="secondary"
+                                  className="h-7 w-7"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleSetHeroImage(index);
+                                  }}
+                                  title="Set as hero image"
+                                >
+                                  <Star className="h-3 w-3" />
+                                </Button>
+                              )}
+                              <Button
+                                type="button"
+                                size="icon"
+                                variant="destructive"
+                                className="h-7 w-7"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveImage(index);
+                                }}
+                                title="Remove image"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {uploadingImages && (
+                      <p className="text-sm text-muted-foreground">Uploading images...</p>
+                    )}
+                  </div>
+                  
                   <DialogFooter>
                     <Button
                       type="button"
@@ -662,41 +889,61 @@ const VendorMenu: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {categories.map((category) => (
-                <Card key={category.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <CardTitle className="text-lg">{category.name}</CardTitle>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditCategory(category)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteCategory(category.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+              {categories.map((category) => {
+                const categoryColor = category.color_code || '#3b82f6';
+                return (
+                  <Card 
+                    key={category.id}
+                    className="relative overflow-hidden border-t-4"
+                    style={{ borderTopColor: categoryColor }}
+                  >
+                    <CardHeader>
+                      <div className="flex items-start justify-between">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-3 w-3 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: categoryColor }}
+                          />
+                          <CardTitle className="text-lg">{category.name}</CardTitle>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditCategory(category)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleDeleteCategory(category.id)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                    {category.description && (
-                      <p className="text-sm text-muted-foreground">
-                        {category.description}
-                      </p>
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <Badge variant="secondary">
-                      {dishesByCategory[category.id]?.length || 0} dishes
-                    </Badge>
-                  </CardContent>
-                </Card>
-              ))}
+                      {category.description && (
+                        <p className="text-sm text-muted-foreground mt-2">
+                          {category.description}
+                        </p>
+                      )}
+                    </CardHeader>
+                    <CardContent>
+                      <Badge 
+                        variant="secondary"
+                        style={{ 
+                          backgroundColor: `${categoryColor}15`,
+                          borderColor: `${categoryColor}40`,
+                          color: categoryColor
+                        }}
+                      >
+                        {dishesByCategory[category.id]?.length || 0} dishes
+                      </Badge>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>
@@ -719,15 +966,30 @@ const VendorMenu: React.FC = () => {
               >
                 All Dishes
               </Button>
-              {categories.map((cat) => (
-                <Button
-                  key={cat.id}
-                  variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
-                  onClick={() => setSelectedCategoryId(cat.id)}
-                >
-                  {cat.name}
-                </Button>
-              ))}
+              {categories.map((cat) => {
+                const catColor = cat.color_code || '#3b82f6';
+                return (
+                  <Button
+                    key={cat.id}
+                    variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategoryId(cat.id)}
+                    style={
+                      selectedCategoryId === cat.id
+                        ? {
+                            backgroundColor: catColor,
+                            borderColor: catColor,
+                            color: 'white',
+                          }
+                        : {
+                            borderColor: catColor,
+                            color: catColor,
+                          }
+                    }
+                  >
+                    {cat.name}
+                  </Button>
+                );
+              })}
             </div>
           )}
 
@@ -748,56 +1010,127 @@ const VendorMenu: React.FC = () => {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDishes.map((dish: Dish) => (
-                <Card key={dish.id}>
-                  <CardHeader>
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg">{dish.name}</CardTitle>
-                        {dish.category && (
-                          <Badge variant="outline" className="mt-1">
-                            {dish.category.name}
-                          </Badge>
-                        )}
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEditDish(dish)}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeleteDish(dish.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {dish.description && (
-                      <p className="text-sm text-muted-foreground mb-2">
-                        {dish.description}
-                      </p>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-semibold">
-                        {dish.price.toLocaleString()} UGX
-                        {dish.unit && ` / ${dish.unit}`}
-                      </span>
-                      <Badge
-                        variant={dish.available ? 'default' : 'secondary'}
+              {filteredDishes.map((dish: Dish) => {
+                // Handle images - could be array, string (JSON), or null
+                let imagesArray: string[] = [];
+                if (dish.images) {
+                  if (Array.isArray(dish.images)) {
+                    imagesArray = dish.images;
+                  } else if (typeof dish.images === 'string') {
+                    try {
+                      const parsed = JSON.parse(dish.images);
+                      imagesArray = Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                      // If parsing fails, treat as single URL string
+                      imagesArray = [dish.images];
+                    }
+                  }
+                }
+                
+                const heroImage = imagesArray.length > 0 ? getImageUrl(imagesArray[0]) : null;
+                const additionalImagesCount = imagesArray.length > 1 ? imagesArray.length - 1 : 0;
+                
+                return (
+                  <Card key={dish.id} className="overflow-hidden relative h-64">
+                    {/* Background Image with Overlay */}
+                    {heroImage ? (
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center"
+                        style={{
+                          backgroundImage: `url(${heroImage})`,
+                        }}
                       >
-                        {dish.available ? 'Available' : 'Unavailable'}
-                      </Badge>
+                        {/* Dark overlay for better text readability */}
+                        <div className="absolute inset-0 bg-black/50" />
+                      </div>
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
+                    )}
+                    
+                    {/* Content Overlay */}
+                    <div className="relative h-full flex flex-col p-4 text-white">
+                      {/* Header with actions */}
+                      <div className="flex items-start justify-between mb-2">
+                        <div className="flex-1">
+                          <CardTitle className="text-lg text-white drop-shadow-lg">
+                            {dish.name}
+                          </CardTitle>
+                          {dish.category && (
+                            <Badge 
+                              variant="secondary" 
+                              className="mt-1 text-white border-white/30"
+                              style={{
+                                backgroundColor: dish.category.color_code 
+                                  ? `${dish.category.color_code}CC` 
+                                  : 'rgba(255, 255, 255, 0.2)',
+                                borderColor: dish.category.color_code 
+                                  ? `${dish.category.color_code}80` 
+                                  : 'rgba(255, 255, 255, 0.3)',
+                              }}
+                            >
+                              {dish.category.name}
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20 h-8 w-8"
+                            onClick={() => handleEditDish(dish)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-white hover:bg-white/20 h-8 w-8"
+                            onClick={() => handleDeleteDish(dish.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                      
+                      {/* Description */}
+                      {dish.description && (
+                        <p className="text-sm text-white/90 mb-auto line-clamp-2 drop-shadow">
+                          {dish.description}
+                        </p>
+                      )}
+                      
+                      {/* Footer with price and availability */}
+                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/20">
+                        <span className="text-lg font-semibold text-white drop-shadow">
+                          {dish.price.toLocaleString()} UGX
+                          {dish.unit && (
+                            <span className="text-sm font-normal text-white/80">
+                              {' '}/ {dish.unit}
+                            </span>
+                          )}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {additionalImagesCount > 0 && (
+                            <Badge
+                              variant="secondary"
+                              className="bg-white/20 text-white border-white/30"
+                            >
+                              <ImageIcon className="h-3 w-3 mr-1" />
+                              +{additionalImagesCount}
+                            </Badge>
+                          )}
+                          <Badge
+                            variant={dish.available ? 'default' : 'secondary'}
+                            className={dish.available ? 'bg-green-500/80 text-white' : 'bg-white/20 text-white border-white/30'}
+                          >
+                            {dish.available ? 'Available' : 'Unavailable'}
+                          </Badge>
+                        </div>
+                      </div>
                     </div>
-                  </CardContent>
-                </Card>
-              ))}
+                  </Card>
+                );
+              })}
             </div>
           )}
         </CardContent>

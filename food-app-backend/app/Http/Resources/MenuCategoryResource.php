@@ -20,6 +20,7 @@ class MenuCategoryResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'display_order' => $this->display_order,
+            'color_code' => $this->color_code,
             'dishes' => DishResource::collection($this->whenLoaded('dishes')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
