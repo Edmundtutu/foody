@@ -41,7 +41,7 @@ const ENTITY_BADGES: Record<'dish' | 'modification' | 'category', string> = {
 };
 
 const ENTITY_ACCENTS: Record<'dish' | 'modification' | 'category', string> = {
-    dish: 'border-blue-200/80 bg-blue-50/70',
+    dish: 'bg-primary/10 border-primary/30 shadow-md`',
     modification: 'border-amber-200/80 bg-amber-50/70',
     category: 'border-violet-200/80 bg-violet-50/70',
 };
@@ -1213,8 +1213,9 @@ function GraphViewport({
                         return (
                             <article
                                 key={node.id}
-                                className={`absolute w-48 -translate-x-1/2 -translate-y-1/2 rounded-lg border bg-card/95 p-3 shadow-sm transition hover:shadow-md ${getEntityAccentClass(node.entity_type)} ${isNodeDeleting ? 'opacity-60' : ''}`}
+                                className={`absolute w-48 -translate-x-1/2 -translate-y-1/2 rounded-lg border p-3 shadow-sm transition-all duration-200 hover:shadow-md backdrop-blur-sm ${getEntityAccentClass(node.entity_type)} ${isNodeDeleting ? 'opacity-60' : ''} ${node.entity_type === 'dish' ? 'ring-1 ring-primary/20' : ''}`}
                                 style={{ left: `${leftPercent}%`, top: `${topPercent}%` }}
+                                title={nodeLabel}
                             >
                                 <header className="mb-2 flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-2">
