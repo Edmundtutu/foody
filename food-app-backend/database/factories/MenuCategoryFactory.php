@@ -17,6 +17,20 @@ class MenuCategoryFactory extends Factory
      */
     public function definition(): array
     {
+        // Predefined color palette for categories
+        $colorPalette = [
+            '#3b82f6', // Blue
+            '#10b981', // Green
+            '#f59e0b', // Amber
+            '#ef4444', // Red
+            '#8b5cf6', // Purple
+            '#ec4899', // Pink
+            '#06b6d4', // Cyan
+            '#84cc16', // Lime
+            '#f97316', // Orange
+            '#6366f1', // Indigo
+        ];
+
         return [
             'restaurant_id' => Restaurant::factory(),
             'name' => fake()->randomElement([
@@ -31,6 +45,7 @@ class MenuCategoryFactory extends Factory
             ]),
             'description' => fake()->optional()->sentence(),
             'display_order' => fake()->numberBetween(1, 10),
+            'color_code' => fake()->randomElement($colorPalette),
         ];
     }
 }

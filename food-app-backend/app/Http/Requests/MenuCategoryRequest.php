@@ -26,6 +26,7 @@ class MenuCategoryRequest extends FormRequest
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'display_order' => 'nullable|integer',
+            'color_code' => 'nullable|string|regex:/^#[0-9A-Fa-f]{6}$/',
         ];
     }
 }

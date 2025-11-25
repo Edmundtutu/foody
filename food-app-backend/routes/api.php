@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
 use App\Http\Controllers\Api\Orders\OrderController;
 use App\Http\Controllers\Api\Restaurants\RestaurantController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
+use App\Http\Controllers\Api\Uploads\UploadController;
 use App\Http\Controllers\Api\VendorAnalyticsController;
 use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
@@ -90,6 +91,9 @@ Route::prefix('v1')->group(function () {
 
         // Vendor Analytics
         Route::get('/vendor/{restaurant_id}/analytics', [VendorAnalyticsController::class, 'index']);
+
+        // Uploads
+        Route::post('/uploads/dishes', [UploadController::class, 'uploadDishImages']);
     });
 
     // Kitchen Graph Management (auth required)
