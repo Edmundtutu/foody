@@ -3,19 +3,21 @@ import { Link, useLocation } from 'react-router-dom';
 import { Button } from './ui/button.tsx';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
-import { 
-  Home, 
-  Search, 
-  MapPin, 
-  ShoppingCart, 
+import {
+  Home,
+  Search,
+  MapPin,
+  ShoppingCart,
   User,
   Heart,
   Store,
-  Package,
   BarChart3,
   LogOut,
-  Settings
+  Settings,
+  Utensils,
+  CookingPot
 } from 'lucide-react';
+import DeskBellIcon from '@/assets/icons/desk-bell.svg?react';
 import { useAuth } from '../context/AuthContext';
 
 interface NavItem {
@@ -42,8 +44,9 @@ const DesktopSidebar: React.FC = () => {
 
   const vendorNavItems: NavItem[] = [
     { name: 'Dashboard', href: '/vendor/dashboard', icon: BarChart3 },
-    { name: 'In Kitchen', href: '/vendor/kitchen', icon: Package },
-    { name: 'Orders', href: '/vendor/orders', icon: ShoppingCart },
+    { name: 'In Kitchen', href: '/vendor/kitchen', icon: CookingPot },
+    { name: 'Menu', href: '/vendor/menu', icon: Utensils },
+    { name: 'Orders', href: '/vendor/orders', icon: DeskBellIcon },
     { name: 'Restaurant Profile', href: '/vendor/profile', icon: Store },
     { name: 'Account', href: '/vendor/account', icon: User },
   ];
@@ -85,7 +88,7 @@ const DesktopSidebar: React.FC = () => {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-2 xl:p-4 space-y-1">
+      <nav className="flex-1 p-3 xl:p-5 space-y-2.5">
         {navItems.map((item) => {
           const isActive = isActivePath(item.href);
           return (
@@ -93,7 +96,7 @@ const DesktopSidebar: React.FC = () => {
               key={item.name}
               to={item.href}
               className={`
-                flex items-center gap-3 px-3 py-2.5 xl:py-3 rounded-lg text-sm font-medium transition-all relative group
+                flex items-center gap-4 px-4 py-3 xl:py-3.5 rounded-xl text-base font-medium transition-all relative group
                 ${isActive 
                   ? 'bg-primary text-primary-foreground shadow-sm' 
                   : 'text-foreground hover:bg-accent hover:text-accent-foreground'
