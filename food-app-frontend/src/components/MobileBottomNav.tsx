@@ -2,17 +2,18 @@ import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
-  Search, 
+  Menu, 
   MapPin, 
   ShoppingCart, 
   User,
   Store,
   Package,
   BarChart3,
-  MessageCircle
+  MessageCircle,
+  HandPlatter
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
+import { useMeal } from '@/context/MealContext';
 import { Badge } from '@/components/ui/badge';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -26,7 +27,7 @@ interface NavItem {
 
 const MobileBottomNav: React.FC = () => {
   const { user } = useAuth();
-  const { getItemCount } = useCart();
+  const { getItemCount } = useMeal();
   const location = useLocation();
   // Chat functionality removed - will be re-implemented with new system
 
@@ -36,7 +37,8 @@ const MobileBottomNav: React.FC = () => {
 
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Discover', href: '/discover', icon: Search },
+    { name: 'Find Food', href: '/find-food', icon: Menu },
+    { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: cartItemCount },
     { name: 'Map', href: '/map', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },
   ];

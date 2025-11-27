@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   Search, 
-  ShoppingCart, 
+  HandPlatter, 
   User, 
   Heart, 
   Menu,
@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import type { User as UserType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
-import { useCart } from '@/context/CartContext';
+import { useMeal } from '@/context/MealContext';
 import { NotificationList } from '@/components/NotificationList';
 import ErrorBoundary from '@/components/ErrorBoundary';
 
@@ -26,7 +26,7 @@ interface NavbarProps {
 
 const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const { logout } = useAuth();
-  const { getItemCount } = useCart();
+  const { getItemCount } = useMeal();
   const location = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,7 +37,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      window.location.href = `/discover?search=${encodeURIComponent(searchQuery)}`;
+      window.location.href = `/find-food?search=${encodeURIComponent(searchQuery)}`;
     }
   };
 
@@ -89,9 +89,9 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
                     </Button>
                   </Link>
 
-                  <Link to="/cart" className="relative">
+                  <Link to="/my-meal" className="relative">
                     <Button variant="ghost" size="icon">
-                      <ShoppingCart className="h-5 w-5" />
+                      <HandPlatter className="h-5 w-5" />
                     </Button>
                     {cartItemCount > 0 && (
                       <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-xs p-0">
@@ -137,9 +137,9 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
               </Button>
               
               {user.role === 'customer' && (
-                <Link to="/cart" className="relative">
+                <Link to="/my-meal" className="relative">
                   <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <ShoppingCart className="h-4 w-4" />
+                    <HandPlatter className="h-4 w-4" />
                   </Button>
                   {cartItemCount > 0 && (
                     <Badge className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center text-xs p-0">

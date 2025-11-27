@@ -9,7 +9,7 @@ export const ROUTES = {
   EXPLORE: '/explore',
   PRODUCT: '/product/:id',
   SHOP: '/shop/:id',
-  CART: '/cart',
+  CART: '/my-meal',
   ORDERS: '/orders',
   PROFILE: '/profile',
   VENDOR_DASHBOARD: '/vendor/dashboard',

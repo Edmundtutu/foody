@@ -21,12 +21,12 @@ import VendorMenu from '@/pages/vendor/Menu';
 
 // Customer Pages (placeholders - to be implemented)
 import Home from '@/pages/customer/Home.tsx';
-import Discover from '@/pages/customer/Discover.tsx';
+import FindFood from '@/pages/customer/FindFood.tsx';
 import Map from '@/pages/customer/Map.tsx';
 import Favorites from '@/pages/customer/Favorites.tsx';
 import Order from '@/pages/customer/Order.tsx';
 import Profile from '@/pages/customer/Profile.tsx';
-import Cart from '@/pages/customer/Cart.tsx';
+import MyMeal from '@/pages/customer/MyMeal.tsx';
 import VendorAccount from '@/pages/vendor/Account';
 
 // Other
@@ -114,9 +114,9 @@ const AppRoutes: React.FC = () => {
                         <Home />
                     </ProtectedRoute>
                 } />
-                <Route path="/discover" element={
+                <Route path="/find-food" element={
                     <ProtectedRoute layout="main">
-                        <Discover />
+                        <FindFood />
                     </ProtectedRoute>
                 } />
                 <Route path="/map" element={
@@ -139,9 +139,9 @@ const AppRoutes: React.FC = () => {
                         <Profile />
                     </ProtectedRoute>
                 } />
-                <Route path="/cart" element={
+                <Route path="/my-meal" element={
                     <ProtectedRoute layout="main">
-                        <Cart />
+                        <MyMeal />
                     </ProtectedRoute>
                 } />
 

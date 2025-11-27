@@ -5,7 +5,7 @@ import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import {
   Home,
-  Search,
+  Menu,
   MapPin,
   ShoppingCart,
   User,
@@ -15,10 +15,12 @@ import {
   LogOut,
   Settings,
   Utensils,
-  CookingPot
+  CookingPot,
+  HandPlatter
 } from 'lucide-react';
 import DeskBellIcon from '@/assets/icons/desk-bell.svg?react';
 import { useAuth } from '../context/AuthContext';
+import { useMeal } from '@/context/MealContext';
 
 interface NavItem {
   name: string;
@@ -29,16 +31,19 @@ interface NavItem {
 
 const DesktopSidebar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { getItemCount } = useMeal();
   const location = useLocation();
 
   if (!user) return null;
 
+  const mealBadge = user.role === 'customer' ? getItemCount() : 0;
+
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
-    { name: 'Discover', href: '/discover', icon: Search },
+    { name: 'Find Food', href: '/find-food', icon: Menu },
     { name: 'Map', href: '/map', icon: MapPin },
     { name: 'Favorites', href: '/favorites', icon: Heart },
-    { name: 'My Order', href: '/order', icon: ShoppingCart, badge: 0 }, // TODO: Replace the Shopping Cart icon with a covered_plate_of_food icon
+    { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: mealBadge },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 

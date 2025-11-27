@@ -7,7 +7,7 @@ import '../styles/App.css';
 import '../styles/index.css';
 import ErrorBoundary from "@/components/ErrorBoundary.tsx";
 import {AuthProvider} from "@/context/AuthContext.tsx";
-import {CartProvider} from "@/context/CartContext.tsx";
+import {MealProvider} from "@/context/MealContext.tsx";
 import {VendorProvider} from "@/context/VendorContext.tsx";
 
 const queryClient = new QueryClient({
@@ -24,7 +24,7 @@ function App() {
       <ErrorBoundary>
           <QueryClientProvider client={queryClient}>
               <AuthProvider>
-                  <CartProvider>
+                  <MealProvider>
                       <VendorProvider>
                           <ErrorBoundary>
                               <Router>
@@ -34,7 +34,7 @@ function App() {
                               </Router>
                           </ErrorBoundary>
                       </VendorProvider>
-                  </CartProvider>
+                  </MealProvider>
               </AuthProvider>
           </QueryClientProvider>
       </ErrorBoundary>
