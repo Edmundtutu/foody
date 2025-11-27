@@ -28,6 +28,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/menu-categories/{id}', [MenuCategoryController::class, 'show']);
     Route::get('/dishes', [DishController::class, 'index']);
     Route::get('/dishes/{id}', [DishController::class, 'show']);
+    Route::get('/dishes/tags/popular', [DishController::class, 'getPopularTags']);
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{id}', [ReviewController::class, 'show']);
 

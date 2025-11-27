@@ -34,6 +34,19 @@ class DishResource extends JsonResource
             $tags = [];
         }
 
+        // Calculate average rating and review count
+        $rating = null;
+        $total_reviews = 0;
+        
+        // Check if reviews relationship is loaded and is a collection
+        if ($this->relationLoaded('reviews')) {
+            $reviews = $this->reviews;
+            if ($reviews && $reviews->count() > 0) {
+                $total_reviews = $reviews->count();
+                $rating = round($reviews->avg('rating'), 1);
+            }
+        }
+
         return [
             'id' => $this->id,
             'restaurant_id' => $this->restaurant_id,
@@ -45,6 +58,10 @@ class DishResource extends JsonResource
             'available' => $this->available,
             'images' => $images,
             'tags' => $tags,
+            'rating' => $rating,
+            'total_reviews' => $total_reviews,
+            'distance' => $this->distance ?? null,
+            'delivery_time' => $this->delivery_time ?? null,
             'category' => new MenuCategoryResource($this->whenLoaded('category')),
             'restaurant' => new RestaurantResource($this->whenLoaded('restaurant')),
             'options' => DishOptionResource::collection($this->whenLoaded('options')),

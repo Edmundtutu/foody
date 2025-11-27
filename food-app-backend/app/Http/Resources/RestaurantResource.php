@@ -14,6 +14,17 @@ class RestaurantResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Calculate rating from reviews if loaded
+        $rating = null;
+        $totalReviews = 0;
+        if ($this->relationLoaded('reviews')) {
+            $reviews = $this->reviews;
+            $totalReviews = $reviews->count();
+            if ($totalReviews > 0) {
+                $rating = round($reviews->avg('rating'), 1);
+            }
+        }
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -25,6 +36,9 @@ class RestaurantResource extends JsonResource
             'longitude' => $this->longitude,
             'verification_status' => $this->verification_status,
             'config' => $this->config,
+            'rating' => $rating,
+            'total_reviews' => $totalReviews,
+            'distance' => property_exists($this->resource, 'distance') ? $this->distance : null,
             'owner' => new UserResource($this->whenLoaded('owner')),
             'categories' => MenuCategoryResource::collection($this->whenLoaded('categories')),
             'dishes' => DishResource::collection($this->whenLoaded('dishes')),

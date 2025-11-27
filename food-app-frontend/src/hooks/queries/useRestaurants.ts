@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import restaurantService from '@/services/restaurantService';
+import restaurantService, { type RestaurantFilters } from '@/services/restaurantService';
 
-export function useRestaurants(filters?: { name?: string; verification_status?: string }) {
+export function useRestaurants(filters?: RestaurantFilters) {
   return useQuery({
     queryKey: ['restaurants', filters],
     queryFn: () => restaurantService.getRestaurants(filters),

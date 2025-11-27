@@ -1,16 +1,28 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
+import RestaurantMap from '@/components/customer/RestaurantMap';
+import type { Restaurant } from '@/services/restaurantService';
 
 const Map: React.FC = () => {
-    return (
-        <div className="min-h-screen p-4">
-            <div className="max-w-6xl mx-auto">
-                <h1 className="text-3xl font-bold mb-4">Map</h1>
-                <p className="text-muted-foreground">
-                    Restaurant map view. Content to be implemented.
-                </p>
-            </div>
-        </div>
-    );
+  const navigate = useNavigate();
+
+  const handleRestaurantSelect = (restaurant: Restaurant) => {
+    // Navigate to restaurant details page
+    navigate(`/restaurants/${restaurant.id}`);
+  };
+
+  return (
+    <div className="min-h-screen p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <h1 className="text-3xl font-bold">Restaurant Map</h1>
+        
+        <RestaurantMap
+          onRestaurantSelect={handleRestaurantSelect}
+          className="h-[60vh] sm:h-[70vh] lg:h-[600px]"
+        />
+      </div>
+    </div>
+  );
 };
 
 export default Map;

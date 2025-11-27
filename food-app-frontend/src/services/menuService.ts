@@ -1,5 +1,6 @@
 import api from './api';
 import type { ApiResponse } from '@/types/api';
+import type { Restaurant } from './restaurantService';
 
 const apiVersion = import.meta.env.VITE_API_VERSION || 'v1';
 
@@ -38,10 +39,15 @@ export interface Dish {
   available: boolean;
   images: string[] | null;
   tags: string[] | null;
+  rating?: number;
+  total_reviews?: number;
+  distance?: number;
+  delivery_time?: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
   category?: MenuCategory;
+  restaurant?: Restaurant;
   options?: DishOption[];
 }
 
@@ -83,6 +89,11 @@ export interface DishFilters {
   category_id?: string;
   available?: boolean;
   name?: string;
+  tag?: string;
+  lat?: number;
+  lng?: number;
+  radius?: number;
+  sort?: 'popular' | 'rating' | 'distance' | 'price';
 }
 
 const menuService = {
@@ -171,6 +182,72 @@ const menuService = {
       return response.data.data;
     }
     throw new Error(response.data.message || 'Failed to fetch dishes');
+  },
+
+  /**
+   * Get dishes by location within radius
+   */
+  async getDishesByLocation(
+    lat: number,
+    lng: number,
+    radius: number = 10,
+    additionalFilters?: Omit<DishFilters, 'lat' | 'lng' | 'radius'>
+  ): Promise<Dish[]> {
+    const filters: DishFilters = {
+      ...additionalFilters,
+      lat,
+      lng,
+      radius,
+    };
+    return this.getDishes(filters);
+  },
+
+  /**
+   * Get top picks dishes
+   */
+  async getTopPicks(filters?: DishFilters): Promise<Dish[]> {
+    const response = await api.get<ApiResponse<Dish[]>>(`/${apiVersion}/dishes`, {
+      params: {
+        ...filters,
+        type: 'top_picks',
+      },
+    });
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch top picks');
+  },
+
+  /**
+   * Get popular dishes
+   */
+  async getPopular(filters?: DishFilters): Promise<Dish[]> {
+    const response = await api.get<ApiResponse<Dish[]>>(`/${apiVersion}/dishes`, {
+      params: {
+        ...filters,
+        type: 'popular',
+      },
+    });
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch popular dishes');
+  },
+
+  /**
+   * Get recently ordered dishes for authenticated user
+   */
+  async getRecentlyOrdered(filters?: DishFilters): Promise<Dish[]> {
+    const response = await api.get<ApiResponse<Dish[]>>(`/${apiVersion}/dishes`, {
+      params: {
+        ...filters,
+        type: 'recently_ordered',
+      },
+    });
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch recently ordered dishes');
   },
 
   /**
@@ -293,6 +370,22 @@ const menuService = {
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete dish option');
     }
+  },
+
+  /**
+   * Get popular tags for filtering (public)
+   */
+  async getPopularTags(limit: number = 10): Promise<string[]> {
+    const response = await api.get<ApiResponse<string[]>>(
+      `/${apiVersion}/dishes/tags/popular`,
+      {
+        params: { limit },
+      }
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch popular tags');
   },
 };
 

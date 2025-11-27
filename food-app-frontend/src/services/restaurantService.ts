@@ -15,6 +15,9 @@ export interface Restaurant {
   longitude: number | null;
   verification_status: string;
   config: Record<string, any> | null;
+  rating?: number;
+  total_reviews?: number;
+  distance?: number;
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
@@ -37,6 +40,9 @@ export interface UpdateRestaurantData extends Partial<CreateRestaurantData> {}
 export interface RestaurantFilters {
   name?: string;
   verification_status?: string;
+  lat?: number;
+  lng?: number;
+  radius?: number; // in kilometers
 }
 
 const restaurantService = {

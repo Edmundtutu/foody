@@ -15,7 +15,7 @@ class RestaurantService
 
     public function getRestaurantById(string $id)
     {
-        return Restaurant::with(['categories.dishes.options', 'owner'])
+        return Restaurant::with(['categories.dishes.options', 'owner', 'reviews.user'])
             ->findOrFail($id);
     }
 
@@ -51,6 +51,35 @@ class RestaurantService
             $query->where('verification_status', $filters['verification_status']);
         }
 
+        // Location-based filtering
+        if (isset($filters['lat']) && isset($filters['lng']) && isset($filters['radius'])) {
+            $lat = (float) $filters['lat'];
+            $lng = (float) $filters['lng'];
+            $radius = (float) $filters['radius']; // in kilometers
+
+            // Haversine formula for distance calculation
+            $query->whereNotNull('latitude')
+                ->whereNotNull('longitude')
+                ->whereRaw(
+                    "(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) <= ?",
+                    [$lat, $lng, $lat, $radius]
+                );
+        }
+
         return $query->with(['categories', 'dishes'])->get();
+    }
+
+    /**
+     * Get restaurants by location within radius
+     */
+    public function getRestaurantsByLocation(float $lat, float $lng, float $radius = 10, array $additionalFilters = [])
+    {
+        $filters = array_merge($additionalFilters, [
+            'lat' => $lat,
+            'lng' => $lng,
+            'radius' => $radius,
+        ]);
+
+        return $this->searchRestaurants($filters);
     }
 }

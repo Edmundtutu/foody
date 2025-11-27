@@ -91,3 +91,64 @@ export function useDeleteDish() {
   });
 }
 
+/**
+ * Hook to fetch dishes by location within radius
+ */
+export function useDishesByLocation(
+  lat: number | null,
+  lng: number | null,
+  radius: number = 10,
+  additionalFilters?: Omit<DishFilters, 'lat' | 'lng' | 'radius'>
+) {
+  return useQuery<Dish[]>({
+    queryKey: ['dishes', 'location', lat, lng, radius, additionalFilters],
+    queryFn: () => menuService.getDishesByLocation(lat!, lng!, radius, additionalFilters),
+    enabled: !!lat && !!lng,
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch top picks dishes
+ */
+export function useTopPicks(filters?: DishFilters) {
+  return useQuery<Dish[]>({
+    queryKey: ['dishes', 'top_picks', filters],
+    queryFn: () => menuService.getTopPicks(filters),
+    staleTime: 1000 * 60 * 10, // 10 minutes (top picks change less frequently)
+  });
+}
+
+/**
+ * Hook to fetch popular dishes
+ */
+export function usePopularDishes(filters?: DishFilters) {
+  return useQuery<Dish[]>({
+    queryKey: ['dishes', 'popular', filters],
+    queryFn: () => menuService.getPopular(filters),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch recently ordered dishes for authenticated user
+ */
+export function useRecentlyOrdered(filters?: DishFilters) {
+  return useQuery<Dish[]>({
+    queryKey: ['dishes', 'recently_ordered', filters],
+    queryFn: () => menuService.getRecentlyOrdered(filters),
+    staleTime: 1000 * 60 * 5, // 5 minutes
+  });
+}
+
+/**
+ * Hook to fetch popular tags for filtering
+ */
+export function usePopularTags(limit: number = 10) {
+  return useQuery<string[]>({
+    queryKey: ['dish-tags', 'popular', limit],
+    queryFn: () => menuService.getPopularTags(limit),
+    staleTime: 1000 * 60 * 15, // 15 minutes (tags don't change frequently)
+  });
+}
+

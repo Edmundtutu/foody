@@ -24,15 +24,62 @@ class RestaurantController extends Controller
 
     public function index(Request $request)
     {
-        $filters = $request->only(['name', 'verification_status']);
+        $filters = $request->only(['name', 'verification_status', 'lat', 'lng', 'radius']);
 
-        if (empty($filters)) {
+        // If location filters are provided, use location-based search
+        if (isset($filters['lat']) && isset($filters['lng'])) {
+            $lat = (float) $filters['lat'];
+            $lng = (float) $filters['lng'];
+            $radius = isset($filters['radius']) ? (float) $filters['radius'] : 10;
+            
+            $restaurants = $this->restaurantService->getRestaurantsByLocation($lat, $lng, $radius, $filters);
+        } elseif (empty($filters)) {
             $restaurants = $this->restaurantService->getVerifiedRestaurants();
         } else {
             $restaurants = $this->restaurantService->searchRestaurants($filters);
         }
 
+        // Load reviews for rating calculation
+        $restaurants->load('reviews');
+
+        // Calculate distance if location provided
+        if (isset($filters['lat']) && isset($filters['lng'])) {
+            $lat = (float) $filters['lat'];
+            $lng = (float) $filters['lng'];
+            
+            $restaurants = $restaurants->map(function ($restaurant) use ($lat, $lng) {
+                if ($restaurant->latitude && $restaurant->longitude) {
+                    $restaurant->distance = round($this->calculateDistance(
+                        $lat,
+                        $lng,
+                        (float) $restaurant->latitude,
+                        (float) $restaurant->longitude
+                    ), 2);
+                }
+                return $restaurant;
+            });
+        }
+
         return $this->success(RestaurantResource::collection($restaurants));
+    }
+
+    /**
+     * Calculate distance between two coordinates using Haversine formula
+     */
+    private function calculateDistance(float $lat1, float $lng1, float $lat2, float $lng2): float
+    {
+        $earthRadius = 6371; // in kilometers
+
+        $dLat = deg2rad($lat2 - $lat1);
+        $dLng = deg2rad($lng2 - $lng1);
+
+        $a = sin($dLat / 2) * sin($dLat / 2) +
+             cos(deg2rad($lat1)) * cos(deg2rad($lat2)) *
+             sin($dLng / 2) * sin($dLng / 2);
+
+        $c = 2 * atan2(sqrt($a), sqrt(1 - $a));
+
+        return $earthRadius * $c;
     }
 
     public function show($id)

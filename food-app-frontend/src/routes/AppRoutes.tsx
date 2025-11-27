@@ -27,6 +27,8 @@ import Favorites from '@/pages/customer/Favorites.tsx';
 import Order from '@/pages/customer/Order.tsx';
 import Profile from '@/pages/customer/Profile.tsx';
 import MyMeal from '@/pages/customer/MyMeal.tsx';
+import DishDetail from '@/pages/customer/DishDetail.tsx';
+import RestaurantDetail from '@/pages/customer/RestaurantDetail.tsx';
 import VendorAccount from '@/pages/vendor/Account';
 
 // Other
@@ -142,6 +144,16 @@ const AppRoutes: React.FC = () => {
                 <Route path="/my-meal" element={
                     <ProtectedRoute layout="main">
                         <MyMeal />
+                    </ProtectedRoute>
+                } />
+                <Route path="/dishes/:id" element={
+                    <ProtectedRoute layout="main">
+                        <DishDetail />
+                    </ProtectedRoute>
+                } />
+                <Route path="/restaurants/:id" element={
+                    <ProtectedRoute layout="main">
+                        <RestaurantDetail />
                     </ProtectedRoute>
                 } />
 
