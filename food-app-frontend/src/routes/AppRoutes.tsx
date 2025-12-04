@@ -22,7 +22,7 @@ import VendorMenu from '@/pages/vendor/Menu';
 // Customer Pages (placeholders - to be implemented)
 import Home from '@/pages/customer/Home.tsx';
 import FindFood from '@/pages/customer/FindFood.tsx';
-import Map from '@/pages/customer/Map.tsx';
+import Restaurants from '@/pages/customer/Restaurants.tsx';
 import Favorites from '@/pages/customer/Favorites.tsx';
 import Order from '@/pages/customer/Order.tsx';
 import Profile from '@/pages/customer/Profile.tsx';
@@ -121,9 +121,9 @@ const AppRoutes: React.FC = () => {
                         <FindFood />
                     </ProtectedRoute>
                 } />
-                <Route path="/map" element={
+                <Route path="/restaurants" element={
                     <ProtectedRoute layout="main">
-                        <Map />
+                        <Restaurants />
                     </ProtectedRoute>
                 } />
                 <Route path="/favorites" element={

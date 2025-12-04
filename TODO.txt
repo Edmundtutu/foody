@@ -1,0 +1,16 @@
+=> Fleet system
+	: Motor vehicle,
+		number plate 
+	: Delivery guy
+		name 
+		nin
+		photo
+=> Combo Menu eg lunch-bufe 
+	category to select from 
+	limit number of items from each category
+	Mind about the Pricing
+		Flat price
+		custom price(increases with the number of items)
+=> Vendor side :
+	Change the naming of nav link "MAP" -> "Find Restaurant"
+	Remove the Preparing filter under index of orders.

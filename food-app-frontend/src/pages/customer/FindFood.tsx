@@ -95,14 +95,14 @@ interface FilterCardProps {
 const FilterCard: React.FC<FilterCardProps> = ({ name, icon: Icon, color, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium transition duration-200 shadow-md ${
+    className={`flex items-center flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition duration-200 shadow-sm ${
       isActive
         ? `${color} text-white`
         : 'bg-card text-foreground hover:bg-accent border border-border'
     }`}
   >
-    <Icon className={`mr-2 h-4 w-4 ${isActive ? 'text-white' : ''}`} />
-    {name}
+    <Icon className={`mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 ${isActive ? 'text-white' : ''}`} />
+    <span className="truncate max-w-[80px] sm:max-w-none">{name}</span>
   </button>
 );
 
@@ -119,21 +119,29 @@ const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
   icon: Icon,
   isLoading,
 }) => (
-  <section className="mt-8">
-    <h2 className="text-xl font-bold text-foreground mb-3 flex items-center px-4 sm:px-0">
-      <Icon className="mr-2 h-5 w-5 text-primary" />
+  <section className="mt-6 sm:mt-8">
+    <h2 className="text-lg sm:text-xl font-bold text-foreground mb-2 sm:mb-3 flex items-center px-2 sm:px-0">
+      <Icon className="mr-2 h-4 w-4 sm:h-5 sm:w-5 text-primary" />
       {title}
     </h2>
     {isLoading ? (
-      <div className="flex items-center justify-center py-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex items-center justify-center py-4 sm:py-8">
+        <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
       </div>
     ) : (
-      <div className="flex overflow-x-scroll pb-4 space-x-4 px-4 sm:px-0 hide-scrollbar">
+      <div className="flex overflow-x-scroll pb-4 space-x-2 sm:space-x-4 px-2 sm:px-0 hide-scrollbar">
         {dishes.length > 0 ? (
-          dishes.map((dish) => <DishCard key={dish.id} dish={dish} />)
+          dishes.map((dish) => (
+            <div key={dish.id} className="min-w-[160px] sm:min-w-[200px]">
+              <DishCard dish={dish} />
+            </div>
+          ))
         ) : (
-          <p className="text-muted-foreground italic">No items available in this category right now.</p>
+          <div className="px-2 sm:px-0 w-full">
+            <p className="text-sm sm:text-base text-muted-foreground italic">
+              No items available in this category right now.
+            </p>
+          </div>
         )}
       </div>
     )}
@@ -238,16 +246,16 @@ const FindFood: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed Header */}
+      {/* Fixed Header - Mobile Optimized */}
       <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-          <h1 className="text-2xl font-black text-primary">Find Food</h1>
+        <div className="px-3 sm:px-4 lg:px-8 py-2 sm:py-3 flex justify-between items-center">
+          <h1 className="text-xl sm:text-2xl font-black text-primary">Find Food</h1>
           <Link to="/my-meal" className="relative">
-            <Button variant="ghost" size="icon">
-              <HandPlatter className="h-5 w-5" />
+            <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+              <HandPlatter className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             {mealItemCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0">
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs p-0">
                 {mealItemCount > 99 ? '99+' : mealItemCount}
               </Badge>
             )}
@@ -257,78 +265,88 @@ const FindFood: React.FC = () => {
 
       {/* Floating Location Badge */}
       {userLocation && (
-        <LocationBadge address={deliveryAddress} onAddressChange={setDeliveryAddress} />
+        <div className="px-3 sm:px-4 lg:px-8 mt-2">
+          <LocationBadge address={deliveryAddress} onAddressChange={setDeliveryAddress} />
+        </div>
       )}
 
-      <main className="max-w-7xl mx-auto pb-10">
-        {/* Search Bar */}
-        <div className="p-4 sm:p-6 lg:p-8 bg-card border-b border-border shadow-sm">
+      <main className="pb-10">
+        {/* Search and Filter Section */}
+        <div className="p-3 sm:p-4 lg:p-8 bg-card border-b border-border shadow-sm">
           {/* Search Bar */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" size={20} />
+          <div className="relative mb-3 sm:mb-4">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4 sm:h-5 sm:w-5" />
             <Input
               type="text"
-              placeholder="Find a Dish or Cuisine..."
-              className="w-full pl-10 pr-4 py-3"
+              placeholder="Search what you are craving..."
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 text-sm sm:text-base"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
 
-          {/* Quick Filter Cards */}
-          <div className="flex overflow-x-scroll space-x-3 pb-2 hide-scrollbar">
-            <FilterCard
-              name="All Dishes"
-              icon={Filter}
-              color="bg-muted"
-              isActive={!activeFilter}
-              onClick={() => {
-                setActiveFilter('');
-                setSearchTerm('');
-              }}
-            />
-            {loadingTags ? (
-              <div className="flex items-center gap-2 px-4">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary"></div>
-                <span className="text-sm text-muted-foreground">Loading filters...</span>
-              </div>
-            ) : (
-              popularTags.map((tag) => (
-                <FilterCard
-                  key={tag}
-                  name={formatTagName(tag)}
-                  icon={getTagIcon(tag)}
-                  color={getTagColor(tag)}
-                  isActive={activeFilter === tag}
-                  onClick={() => setActiveFilter(tag)}
-                />
-              ))
-            )}
+          {/* Quick Filter Cards - Mobile scrollable */}
+          <div className="relative">
+            <div className="flex overflow-x-scroll space-x-2 pb-1 hide-scrollbar">
+              <FilterCard
+                name="All Dishes"
+                icon={Filter}
+                color="bg-muted"
+                isActive={!activeFilter}
+                onClick={() => {
+                  setActiveFilter('');
+                  setSearchTerm('');
+                }}
+              />
+              {loadingTags ? (
+                <div className="flex items-center gap-2 px-3 py-1.5">
+                  <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-primary"></div>
+                  <span className="text-xs text-muted-foreground">Loading...</span>
+                </div>
+              ) : (
+                popularTags.map((tag) => (
+                  <FilterCard
+                    key={tag}
+                    name={formatTagName(tag)}
+                    icon={getTagIcon(tag)}
+                    color={getTagColor(tag)}
+                    isActive={activeFilter === tag}
+                    onClick={() => setActiveFilter(tag)}
+                  />
+                ))
+              )}
+            </div>
+            {/* Gradient fade for scroll indication */}
+            <div className="absolute right-0 top-0 bottom-1 w-10 bg-gradient-to-l from-card to-transparent pointer-events-none"></div>
           </div>
         </div>
 
-        <div className="px-4 sm:px-6 lg:px-8">
+        <div className="px-3 sm:px-4 lg:px-8">
           {/* Search/Filter Results */}
           {activeFilter || searchTerm ? (
-            <section className="mt-8">
-              <h2 className="text-2xl font-bold text-foreground mb-4 flex items-center">
-                <Star className="mr-2 h-6 w-6 text-primary fill-primary" />
+            <section className="mt-6 sm:mt-8">
+              <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-3 sm:mb-4 flex items-center">
+                <Star className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary fill-primary" />
                 Results for "{activeFilter || searchTerm}"
               </h2>
               {loadingSearch ? (
-                <div className="flex items-center justify-center py-10">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <div className="flex items-center justify-center py-8 sm:py-10">
+                  <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
                 </div>
               ) : displayedDishes.length > 0 ? (
-                <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
                   {displayedDishes.map((dish) => (
-                    <DishCard key={`search-${dish.id}`} dish={dish} />
+                    <div key={`search-${dish.id}`} className="w-full">
+                      <DishCard dish={dish} />
+                    </div>
                   ))}
                 </div>
               ) : (
-                <p className="col-span-full text-center py-10 text-lg text-muted-foreground italic">
-                  Sorry, we couldn't find any dishes matching your search or filter.
-                </p>
+                <div className="text-center py-8 sm:py-10 px-4">
+                  <p className="text-base sm:text-lg text-muted-foreground italic">
+                    Sorry, we couldn't find any dishes matching your search or filter.
+                  </p>
+                </div>
               )}
             </section>
           ) : (

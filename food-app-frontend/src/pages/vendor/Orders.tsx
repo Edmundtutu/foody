@@ -16,13 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+
 import { toast } from 'sonner';
 import { Package, AlertCircle } from 'lucide-react';
 import type { Order } from '@/types';
@@ -45,6 +39,66 @@ const VendorOrders: React.FC = () => {
     return orders.filter((order) => order.status === statusFilter);
   }, [orders, statusFilter]);
 
+  // Calculate order counts per status
+  const statusCounts = useMemo(() => {
+    if (!orders) return {
+      all: 0,
+      pending: 0,
+      confirmed: 0,
+      ready: 0,
+      completed: 0,
+      cancelled: 0,
+    };
+    return {
+      all: orders.length,
+      pending: orders.filter(o => o.status === 'pending').length,
+      confirmed: orders.filter(o => o.status === 'confirmed').length,
+      ready: orders.filter(o => o.status === 'ready').length,
+      completed: orders.filter(o => o.status === 'completed').length,
+      cancelled: orders.filter(o => o.status === 'cancelled').length,
+    };
+  }, [orders]);
+
+  // Status filter configuration
+  const statusFilterConfig = [
+    {
+      status: 'all',
+      label: 'All Orders',
+      activeClasses: 'bg-primary text-white shadow-sm',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+    {
+      status: 'pending',
+      label: 'Pending',
+      activeClasses: 'bg-amber-100 text-amber-800 border border-amber-200',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+    {
+      status: 'confirmed',
+      label: 'Confirmed',
+      activeClasses: 'bg-blue-100 text-blue-800 border border-blue-200',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+    {
+      status: 'ready',
+      label: 'Ready',
+      activeClasses: 'bg-green-100 text-green-800 border border-green-200',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+    {
+      status: 'completed',
+      label: 'Completed',
+      activeClasses: 'bg-emerald-100 text-emerald-800 border border-emerald-200',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+    {
+      status: 'cancelled',
+      label: 'Cancelled',
+      activeClasses: 'bg-red-100 text-red-800 border border-red-200',
+      inactiveClasses: 'bg-gray-100 text-gray-700 hover:bg-gray-200',
+    },
+  ];
+
   // Handle order status update with better error handling
   const handleUpdateStatus = async (
     orderId: string,
@@ -55,9 +109,9 @@ const VendorOrders: React.FC = () => {
       toast.success(`Order status updated to ${status}`);
       setSelectedOrder(null);
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || 
-                           error?.message || 
-                           'Failed to update order status';
+      const errorMessage = error?.response?.data?.message ||
+        error?.message ||
+        'Failed to update order status';
       toast.error(errorMessage);
       console.error('Order status update failed:', error);
     }
@@ -119,7 +173,7 @@ const VendorOrders: React.FC = () => {
             <p className="text-muted-foreground text-center mb-4">
               {error instanceof Error ? error.message : 'An error occurred while loading orders'}
             </p>
-            <Button 
+            <Button
               onClick={() => window.location.reload()}
               variant="outline"
             >
@@ -133,29 +187,45 @@ const VendorOrders: React.FC = () => {
 
   return (
     <div className="container mx-auto py-6 px-4 sm:px-6 lg:px-8 space-y-6">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
         <div>
           <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold">
             Incoming Orders
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Manage and track your restaurant orders
-          </p>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Orders</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="confirmed">Confirmed</SelectItem>
-            <SelectItem value="preparing">Preparing</SelectItem>
-            <SelectItem value="ready">Ready</SelectItem>
-            <SelectItem value="completed">Completed</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
+
+        {/* Enhanced Pill Tabs with count badges */}
+        <div className="flex flex-wrap gap-2">
+          {statusFilterConfig.map((filter) => {
+            const count = statusCounts[filter.status as keyof typeof statusCounts];
+            const isActive = statusFilter === filter.status;
+            
+            return (
+              <button
+                key={filter.status}
+                onClick={() => setStatusFilter(filter.status)}
+                className={`
+                  inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all
+                  ${isActive ? filter.activeClasses : filter.inactiveClasses}
+                `}
+              >
+                <span>{filter.label}</span>
+                <Badge
+                  className={`
+                    h-5 min-w-[20px] px-1.5 text-[10px] font-semibold
+                    ${isActive 
+                      ? 'bg-white/20 text-current border-current/20' 
+                      : 'bg-gray-200 text-gray-700 border-gray-300'
+                    }
+                  `}
+                  variant="outline"
+                >
+                  {count > 99 ? '99+' : count}
+                </Badge>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {!filteredOrders || filteredOrders.length === 0 ? (
@@ -178,7 +248,7 @@ const VendorOrders: React.FC = () => {
               context="vendor"
               onConfirm={handleConfirmOrder}
               onReject={handleRejectOrder}
-              onStartPost={() => {}}
+              onStartPost={() => { }}
               isPostDisabled={true}
             />
           ))}

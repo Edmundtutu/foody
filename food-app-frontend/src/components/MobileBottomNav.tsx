@@ -39,7 +39,7 @@ const MobileBottomNav: React.FC = () => {
     { name: 'Home', href: '/', icon: Home },
     { name: 'Find Food', href: '/find-food', icon: Menu },
     { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: cartItemCount },
-    { name: 'Map', href: '/map', icon: MapPin },
+    { name: 'Restaurants', href: '/restaurants', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 

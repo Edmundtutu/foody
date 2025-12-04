@@ -41,7 +41,7 @@ const DesktopSidebar: React.FC = () => {
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Find Food', href: '/find-food', icon: Menu },
-    { name: 'Map', href: '/map', icon: MapPin },
+    { name: 'Restaurants', href: '/restaurants', icon: MapPin },
     { name: 'Favorites', href: '/favorites', icon: Heart },
     { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: mealBadge },
     { name: 'Profile', href: '/profile', icon: User },
