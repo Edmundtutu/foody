@@ -22,14 +22,16 @@ class OrderRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'user_id' => 'required|exists:users,id',
+            // user_id is set by the controller from auth, not from request
             'restaurant_id' => 'required|exists:restaurants,id',
             'notes' => 'nullable|string',
+            'delivery_address' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.dish_id' => 'required|exists:dishes,id',
             'items.*.quantity' => 'required|integer|min:1',
             'items.*.unit_price' => 'required|integer|min:0',
             'items.*.total_price' => 'required|integer|min:0',
+            'items.*.notes' => 'nullable|string',
             'items.*.options' => 'nullable|array',
         ];
     }

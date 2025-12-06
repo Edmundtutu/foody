@@ -7,7 +7,6 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { 
   Star, 
-  Heart, 
   MapPin, 
   Share,
   Plus,
@@ -44,7 +43,7 @@ const DishDetail: React.FC = () => {
   const [showReviewForm, setShowReviewForm] = useState(false);
 
   const { data: dish, isLoading: loadingDish } = useDish(id || null);
-  const { data: dishOptions, isLoading: loadingOptions } = useQuery<DishOption[]>({
+  const { data: dishOptions } = useQuery<DishOption[]>({
     queryKey: ['dish-options', id],
     queryFn: () => menuService.getDishOptions(id!),
     enabled: !!id,

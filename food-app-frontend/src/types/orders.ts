@@ -52,7 +52,9 @@ export interface CreateOrderData {
         dish_id: string;
         quantity: number;
         unit_price: number;
+        total_price: number;
         notes?: string;
+        options?: any[];
     }[];
     notes?: string;
     delivery_address?: string;

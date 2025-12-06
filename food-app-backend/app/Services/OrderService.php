@@ -3,9 +3,12 @@
 namespace App\Services;
 
 use App\Events\OrderStatusUpdated;
+use App\Models\Dish;
+use App\Models\DishOption;
 use App\Models\Order;
 use App\Models\OrderItem;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 
 class OrderService
 {
@@ -21,15 +24,82 @@ class OrderService
             ]);
 
             $total = 0;
-            foreach ($data['items'] as $item) {
+            foreach ($data['items'] as $itemData) {
+                // SECURITY: Validate prices server-side
+                $dish = Dish::findOrFail($itemData['dish_id']);
+                
+                // Verify dish belongs to the restaurant
+                if ($dish->restaurant_id !== $data['restaurant_id']) {
+                    throw ValidationException::withMessages([
+                        'items' => ['One or more dishes do not belong to this restaurant.']
+                    ]);
+                }
+
+                // Verify dish is available
+                if (!$dish->available) {
+                    throw ValidationException::withMessages([
+                        'items' => ["Dish '{$dish->name}' is currently unavailable."]
+                    ]);
+                }
+
+                // Calculate actual unit price from database
+                $actualUnitPrice = $dish->price;
+                $validatedOptions = [];
+
+                // Validate and calculate options price
+                if (!empty($itemData['options'])) {
+                    $optionIds = array_column($itemData['options'], 'id');
+                    $dishOptions = DishOption::whereIn('id', $optionIds)
+                        ->where('dish_id', $dish->id)
+                        ->get()
+                        ->keyBy('id');
+
+                    foreach ($itemData['options'] as $optionData) {
+                        $optionId = $optionData['id'] ?? null;
+                        
+                        if (!$optionId || !isset($dishOptions[$optionId])) {
+                            throw ValidationException::withMessages([
+                                'items' => ['Invalid option selected for dish.']
+                            ]);
+                        }
+
+                        $validOption = $dishOptions[$optionId];
+                        $actualUnitPrice += $validOption->extra_cost;
+                        $validatedOptions[] = [
+                            'id' => $validOption->id,
+                            'name' => $validOption->name,
+                            'extra_cost' => $validOption->extra_cost,
+                        ];
+                    }
+                }
+
+                // Calculate actual total price
+                $actualTotalPrice = $actualUnitPrice * $itemData['quantity'];
+
+                // Verify submitted prices match (prevent price manipulation)
+                if (isset($itemData['unit_price']) && $itemData['unit_price'] !== $actualUnitPrice) {
+                    throw ValidationException::withMessages([
+                        'items' => ['Price mismatch detected. Please refresh and try again.']
+                    ]);
+                }
+
+                if (isset($itemData['total_price']) && $itemData['total_price'] !== $actualTotalPrice) {
+                    throw ValidationException::withMessages([
+                        'items' => ['Price mismatch detected. Please refresh and try again.']
+                    ]);
+                }
+
+                // Create order item with validated prices
                 $orderItem = OrderItem::create([
                     'order_id' => $order->id,
-                    'dish_id' => $item['dish_id'],
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'total_price' => $item['total_price'],
-                    'options' => $item['options'] ?? null,
+                    'dish_id' => $dish->id,
+                    'quantity' => $itemData['quantity'],
+                    'unit_price' => $actualUnitPrice,
+                    'total_price' => $actualTotalPrice,
+                    'notes' => $itemData['notes'] ?? null,
+                    'options' => !empty($validatedOptions) ? $validatedOptions : null,
                 ]);
+                
                 $total += $orderItem->total_price;
             }
 

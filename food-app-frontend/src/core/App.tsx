@@ -7,7 +7,7 @@ import '../styles/App.css';
 import '../styles/index.css';
 import ErrorBoundary from "@/components/ErrorBoundary.tsx";
 import {AuthProvider} from "@/context/AuthContext.tsx";
-import {MealProvider} from "@/context/MealContext.tsx";
+import {MealProvider} from "@/context/MealContext";
 import {VendorProvider} from "@/context/VendorContext.tsx";
 
 const queryClient = new QueryClient({

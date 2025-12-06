@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 import type { Dish, DishOption } from '@/services/menuService';
 
 export interface MealItem {
+  id: string;
   dish: Dish;
   quantity: number;
   selectedOptions: DishOption[];
@@ -10,18 +11,28 @@ export interface MealItem {
 interface MealContextType {
   mealItems: MealItem[];
   addToMeal: (dish: Dish, quantity?: number, selectedOptions?: DishOption[]) => void;
-  removeFromMeal: (dishId: string) => void;
-  updateQuantity: (dishId: string, quantity: number) => void;
-  updateOptions: (dishId: string, selectedOptions: DishOption[]) => void;
+  removeFromMeal: (mealItemId: string) => void;
+  updateQuantity: (mealItemId: string, quantity: number) => void;
+  updateOptions: (mealItemId: string, selectedOptions: DishOption[]) => void;
   getItemCount: () => number;
   getTotalPrice: () => number;
   clearMeal: () => void;
-  getMealItem: (dishId: string) => MealItem | undefined;
+  getMealItem: (mealItemId: string) => MealItem | undefined;
+  getItemsByRestaurant: () => Record<string, MealItem[]>;
+  getItemsForDish: (dishId: string) => MealItem[];
+  getDishQuantity: (dishId: string) => number;
 }
 
 const MealContext = createContext<MealContextType | undefined>(undefined);
 
 const STORAGE_KEY = 'food-app-meal';
+
+const generateMealItemId = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return `meal-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+};
 
 export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [mealItems, setMealItems] = useState<MealItem[]>([]);
@@ -31,8 +42,13 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) {
-        const parsed = JSON.parse(stored);
-        setMealItems(parsed);
+        const parsed = JSON.parse(stored) as Array<MealItem & { id?: string }>;
+        const normalized = parsed.map((item) => ({
+          ...item,
+          id: item.id || generateMealItemId(),
+          selectedOptions: item.selectedOptions || [],
+        }));
+        setMealItems(normalized);
       }
     } catch (error) {
       console.error('Failed to load meal from localStorage:', error);
@@ -49,46 +65,38 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [mealItems]);
 
   const addToMeal = useCallback((dish: Dish, quantity: number = 1, selectedOptions: DishOption[] = []) => {
-    setMealItems((prev) => {
-      const existingIndex = prev.findIndex((item) => item.dish.id === dish.id);
-      
-      if (existingIndex >= 0) {
-        // Update existing item
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + quantity,
-          selectedOptions: selectedOptions.length > 0 ? selectedOptions : updated[existingIndex].selectedOptions,
-        };
-        return updated;
-      } else {
-        // Add new item
-        return [...prev, { dish, quantity, selectedOptions }];
-      }
-    });
+    setMealItems((prev) => [
+      ...prev,
+      {
+        id: generateMealItemId(),
+        dish,
+        quantity,
+        selectedOptions,
+      },
+    ]);
   }, []);
 
-  const removeFromMeal = useCallback((dishId: string) => {
-    setMealItems((prev) => prev.filter((item) => item.dish.id !== dishId));
+  const removeFromMeal = useCallback((mealItemId: string) => {
+    setMealItems((prev) => prev.filter((item) => item.id !== mealItemId));
   }, []);
 
-  const updateQuantity = useCallback((dishId: string, quantity: number) => {
+  const updateQuantity = useCallback((mealItemId: string, quantity: number) => {
     if (quantity <= 0) {
-      removeFromMeal(dishId);
+      removeFromMeal(mealItemId);
       return;
     }
     
     setMealItems((prev) =>
       prev.map((item) =>
-        item.dish.id === dishId ? { ...item, quantity } : item
+        item.id === mealItemId ? { ...item, quantity } : item
       )
     );
   }, [removeFromMeal]);
 
-  const updateOptions = useCallback((dishId: string, selectedOptions: DishOption[]) => {
+  const updateOptions = useCallback((mealItemId: string, selectedOptions: DishOption[]) => {
     setMealItems((prev) =>
       prev.map((item) =>
-        item.dish.id === dishId ? { ...item, selectedOptions } : item
+        item.id === mealItemId ? { ...item, selectedOptions } : item
       )
     );
   }, []);
@@ -106,13 +114,33 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }, 0);
   }, [mealItems]);
 
+  const getItemsByRestaurant = useCallback(() => {
+    const grouped: Record<string, MealItem[]> = {};
+    mealItems.forEach((item) => {
+      const restaurantId = item.dish.restaurant_id;
+      if (!grouped[restaurantId]) {
+        grouped[restaurantId] = [];
+      }
+      grouped[restaurantId].push(item);
+    });
+    return grouped;
+  }, [mealItems]);
+
   const clearMeal = useCallback(() => {
     setMealItems([]);
   }, []);
 
-  const getMealItem = useCallback((dishId: string) => {
-    return mealItems.find((item) => item.dish.id === dishId);
+  const getMealItem = useCallback((mealItemId: string) => {
+    return mealItems.find((item) => item.id === mealItemId);
   }, [mealItems]);
+
+  const getItemsForDish = useCallback((dishId: string) => {
+    return mealItems.filter((item) => item.dish.id === dishId);
+  }, [mealItems]);
+
+  const getDishQuantity = useCallback((dishId: string) => {
+    return getItemsForDish(dishId).reduce((total, item) => total + item.quantity, 0);
+  }, [getItemsForDish]);
 
   const value: MealContextType = {
     mealItems,
@@ -124,6 +152,9 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
     getTotalPrice,
     clearMeal,
     getMealItem,
+    getItemsByRestaurant,
+    getItemsForDish,
+    getDishQuantity,
   };
 
   return (
