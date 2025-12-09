@@ -96,6 +96,75 @@ export interface DishFilters {
   sort?: 'popular' | 'rating' | 'distance' | 'price';
 }
 
+// Combo-related interfaces
+export interface ComboGroupItem {
+  id: string;
+  combo_group_id: string;
+  dish_id: string;
+  extra_price: number;
+  created_at: string;
+  updated_at: string;
+  dish?: Dish;
+}
+
+export interface ComboGroup {
+  id: string;
+  combo_id: string;
+  name: string;
+  allowed_min: number;
+  allowed_max: number;
+  created_at: string;
+  updated_at: string;
+  suggested_categories?: MenuCategory[];
+  items?: ComboGroupItem[];
+}
+
+export interface Combo {
+  id: string;
+  restaurant_id: string;
+  name: string;
+  description: string | null;
+  pricing_mode: 'FIXED' | 'DYNAMIC' | 'HYBRID';
+  base_price: number;
+  available: boolean;
+  created_at: string;
+  updated_at: string;
+  groups?: ComboGroup[];
+}
+
+export interface CreateComboData {
+  restaurant_id: string;
+  name: string;
+  description?: string;
+  pricing_mode: 'fixed' | 'dynamic' | 'hybrid'; // lowercase for request
+  base_price: number;
+  available?: boolean;
+}
+
+export interface UpdateComboData extends Partial<CreateComboData> {}
+
+export interface CreateComboGroupData {
+  combo_id: string;
+  name: string;
+  allowed_min: number;
+  allowed_max: number;
+  category_hints?: string[]; // Array of category IDs
+}
+
+export interface UpdateComboGroupData extends Partial<Omit<CreateComboGroupData, 'combo_id'>> {}
+
+export interface CreateComboGroupItemData {
+  combo_group_id: string;
+  dish_id: string;
+  extra_price: number;
+}
+
+export interface ComboFilters {
+  restaurant_id?: string;
+  available?: boolean;
+  pricing_mode?: 'FIXED' | 'DYNAMIC' | 'HYBRID';
+}
+
 const menuService = {
   /**
    * Get all menu categories for a restaurant (public)
@@ -386,6 +455,148 @@ const menuService = {
       return response.data.data;
     }
     throw new Error(response.data.message || 'Failed to fetch popular tags');
+  },
+
+  // ========== COMBO METHODS ==========
+
+  /**
+   * Get all combos for a restaurant (public)
+   */
+  async getCombos(filters?: ComboFilters): Promise<Combo[]> {
+    const response = await api.get<ApiResponse<Combo[]>>(`/${apiVersion}/combos`, {
+      params: filters,
+    });
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch combos');
+  },
+
+  /**
+   * Get combos by restaurant ID (public)
+   */
+  async getRestaurantCombos(restaurantId: string): Promise<Combo[]> {
+    const response = await api.get<ApiResponse<Combo[]>>(
+      `/${apiVersion}/restaurants/${restaurantId}/combos`
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch restaurant combos');
+  },
+
+  /**
+   * Get a single combo by ID (public)
+   */
+  async getCombo(comboId: string): Promise<Combo> {
+    const response = await api.get<ApiResponse<Combo>>(`/${apiVersion}/combos/${comboId}`);
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to fetch combo');
+  },
+
+  /**
+   * Create a new combo (authenticated)
+   */
+  async createCombo(data: CreateComboData): Promise<Combo> {
+    const response = await api.post<ApiResponse<Combo>>(`/${apiVersion}/combos`, data);
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to create combo');
+  },
+
+  /**
+   * Update a combo (authenticated)
+   */
+  async updateCombo(comboId: string, data: UpdateComboData): Promise<Combo> {
+    const response = await api.put<ApiResponse<Combo>>(
+      `/${apiVersion}/combos/${comboId}`,
+      data
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to update combo');
+  },
+
+  /**
+   * Delete a combo (authenticated)
+   */
+  async deleteCombo(comboId: string): Promise<void> {
+    const response = await api.delete<ApiResponse<null>>(
+      `/${apiVersion}/combos/${comboId}`
+    );
+    if (response.data.status !== 'success') {
+      throw new Error(response.data.message || 'Failed to delete combo');
+    }
+  },
+
+  /**
+   * Create a combo group (authenticated)
+   */
+  async createComboGroup(data: CreateComboGroupData): Promise<ComboGroup> {
+    const response = await api.post<ApiResponse<ComboGroup>>(
+      `/${apiVersion}/combos/${data.combo_id}/groups`,
+      data
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to create combo group');
+  },
+
+  /**
+   * Update a combo group (authenticated)
+   */
+  async updateComboGroup(groupId: string, data: UpdateComboGroupData): Promise<ComboGroup> {
+    const response = await api.put<ApiResponse<ComboGroup>>(
+      `/${apiVersion}/combo-groups/${groupId}`,
+      data
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to update combo group');
+  },
+
+  /**
+   * Delete a combo group (authenticated)
+   */
+  async deleteComboGroup(groupId: string): Promise<void> {
+    const response = await api.delete<ApiResponse<null>>(
+      `/${apiVersion}/combo-groups/${groupId}`
+    );
+    if (response.data.status !== 'success') {
+      throw new Error(response.data.message || 'Failed to delete combo group');
+    }
+  },
+
+  /**
+   * Create a combo group item (authenticated)
+   */
+  async createComboGroupItem(data: CreateComboGroupItemData): Promise<ComboGroupItem> {
+    const response = await api.post<ApiResponse<ComboGroupItem>>(
+      `/${apiVersion}/combo-groups/${data.combo_group_id}/items`,
+      data
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to create combo group item');
+  },
+
+  /**
+   * Delete a combo group item (authenticated)
+   */
+  async deleteComboGroupItem(itemId: string): Promise<void> {
+    const response = await api.delete<ApiResponse<null>>(
+      `/${apiVersion}/combo-group-items/${itemId}`
+    );
+    if (response.data.status !== 'success') {
+      throw new Error(response.data.message || 'Failed to delete combo group item');
+    }
   },
 };
 
