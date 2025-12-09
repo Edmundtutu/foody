@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Models\Combo;
 use App\Models\Dish;
 use App\Models\InventoryNode;
 use App\Models\InventoryNodeEdge;
 use App\Models\MenuCategory;
 use App\Models\Order;
 use App\Models\Restaurant;
+use App\Policies\ComboPolicy;
 use App\Policies\DishPolicy;
 use App\Policies\KitchenPolicy;
 use App\Policies\MenuCategoryPolicy;
@@ -39,6 +41,7 @@ class AppServiceProvider extends AuthServiceProvider
         Gate::policy(Order::class, OrderPolicy::class);
         Gate::policy(InventoryNode::class, KitchenPolicy::class);
         Gate::policy(InventoryNodeEdge::class, KitchenPolicy::class);
+        Gate::policy(Combo::class, ComboPolicy::class);
 
         ResetPassword::createUrlUsing(function (object $notifiable, string $token) {
             return config('app.frontend_url')."/password-reset/$token?email={$notifiable->getEmailForPasswordReset()}";

@@ -12,5 +12,5 @@
 		Flat price
 		custom price(increases with the number of items)
 => Vendor side :
-	Change the naming of nav link "MAP" -> "Find Restaurant"
-	Remove the Preparing filter under index of orders.
+	~ Change the naming of nav link "MAP" -> "Find Restaurant" ~
+	~ Remove the Preparing filter under index of orders. ~

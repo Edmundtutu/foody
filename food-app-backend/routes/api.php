@@ -2,6 +2,11 @@
 
 use App\Http\Controllers\Api\Chats\ConversationController;
 use App\Http\Controllers\Api\Chats\MessageController;
+use App\Http\Controllers\Api\Combos\ComboCalculationController;
+use App\Http\Controllers\Api\Combos\ComboController;
+use App\Http\Controllers\Api\Combos\ComboGroupController;
+use App\Http\Controllers\Api\Combos\ComboGroupItemController;
+use App\Http\Controllers\Api\Combos\ComboSelectionController;
 use App\Http\Controllers\Api\Dishes\DishController;
 use App\Http\Controllers\Api\Dishes\DishOptionController;
 use App\Http\Controllers\Api\Inventory\KitchenController;
@@ -31,6 +36,11 @@ Route::prefix('v1')->group(function () {
     Route::get('/dishes/tags/popular', [DishController::class, 'getPopularTags']);
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{id}', [ReviewController::class, 'show']);
+
+    // Combos (public consumption)
+    Route::get('/combos', [ComboController::class, 'index']);
+    Route::get('/combos/{combo}', [ComboController::class, 'show']);
+    Route::post('/combos/{combo}/calculate', ComboCalculationController::class);
 
     // Authenticated endpoints
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -69,6 +79,25 @@ Route::prefix('v1')->group(function () {
         Route::post('/dish-options', [DishOptionController::class, 'store']);
         Route::put('/dish-options/{id}', [DishOptionController::class, 'update']);
         Route::delete('/dish-options/{id}', [DishOptionController::class, 'destroy']);
+
+        // Combos management
+        Route::post('/combos', [ComboController::class, 'store']);
+        Route::put('/combos/{combo}', [ComboController::class, 'update']);
+        Route::delete('/combos/{combo}', [ComboController::class, 'destroy']);
+
+        Route::prefix('combos/{combo}')->group(function () {
+            Route::get('/groups', [ComboGroupController::class, 'index']);
+            Route::post('/groups', [ComboGroupController::class, 'store']);
+            Route::put('/groups/{group}', [ComboGroupController::class, 'update']);
+            Route::delete('/groups/{group}', [ComboGroupController::class, 'destroy']);
+
+            Route::get('/groups/{group}/items', [ComboGroupItemController::class, 'index']);
+            Route::post('/groups/{group}/items', [ComboGroupItemController::class, 'store']);
+            Route::put('/groups/{group}/items/{item}', [ComboGroupItemController::class, 'update']);
+            Route::delete('/groups/{group}/items/{item}', [ComboGroupItemController::class, 'destroy']);
+
+            Route::post('/order', [ComboSelectionController::class, 'store']);
+        });
 
         // Orders
         Route::get('/orders', [OrderController::class, 'index']);

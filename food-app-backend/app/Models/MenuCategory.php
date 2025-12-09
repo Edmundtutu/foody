@@ -33,4 +33,9 @@ class MenuCategory extends Model
     {
         return $this->hasMany(Dish::class, 'category_id');
     }
+
+    public function comboGroupHints()
+    {
+        return $this->belongsToMany(ComboGroup::class, 'combo_group_category_hints');
+    }
 }

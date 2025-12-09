@@ -23,7 +23,8 @@ class OrderItemFactory extends Factory
         
         return [
             'order_id' => Order::factory(),
-            'dish_id' => Dish::factory(),
+            'orderable_type' => Dish::class,
+            'orderable_id' => Dish::factory(),
             'quantity' => $quantity,
             'unit_price' => $unitPrice,
             'total_price' => $quantity * $unitPrice,

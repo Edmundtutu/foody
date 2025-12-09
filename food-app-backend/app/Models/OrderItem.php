@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class OrderItem extends Model
@@ -13,7 +14,8 @@ class OrderItem extends Model
 
     protected $fillable = [
         'order_id',
-        'dish_id',
+        'orderable_id',
+        'orderable_type',
         'quantity',
         'unit_price',
         'total_price',
@@ -34,8 +36,8 @@ class OrderItem extends Model
         return $this->belongsTo(Order::class);
     }
 
-    public function dish()
+    public function orderable(): MorphTo
     {
-        return $this->belongsTo(Dish::class);
+        return $this->morphTo();
     }
 }
