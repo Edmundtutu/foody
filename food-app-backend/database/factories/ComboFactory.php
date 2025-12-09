@@ -27,10 +27,12 @@ class ComboFactory extends Factory
         };
 
         return [
+            'restaurant_id' => \App\Models\Restaurant::factory(),
             'name' => $this->faker->unique()->words(2, true) . ' Combo',
             'description' => $this->faker->sentence(),
             'pricing_mode' => $mode,
             'base_price' => $basePrice,
+            'available' => true,
         ];
     }
 }

@@ -32,10 +32,12 @@ abstract class ComboRequest extends FormRequest
         $presence = $isUpdate ? 'sometimes' : 'required';
 
         return [
+            'restaurant_id' => [$presence, 'exists:restaurants,id'],
             'name' => [$presence, 'string', 'max:255'],
             'description' => ['sometimes', 'nullable', 'string'],
             'pricing_mode' => [$presence, Rule::in(['FIXED', 'DYNAMIC', 'HYBRID'])],
             'base_price' => [$presence, 'integer', 'min:0'],
+            'available' => ['sometimes', 'boolean'],
         ];
     }
 

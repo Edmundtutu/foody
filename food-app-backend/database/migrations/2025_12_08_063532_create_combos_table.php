@@ -13,10 +13,12 @@ return new class extends Migration
     {
         Schema::create('combos', function (Blueprint $table) {
             $table->ulid('id')->primary();
+            $table->foreignUlid('restaurant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
             $table->enum('pricing_mode', ['FIXED', 'DYNAMIC', 'HYBRID'])->default('FIXED');
             $table->decimal('base_price', 10, 2)->default(0);
+            $table->boolean('available')->default(true);
             $table->timestamps();
         });
     }

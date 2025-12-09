@@ -53,12 +53,15 @@ class AnalyticsService
             ->toArray();
 
         // Top dishes (by quantity ordered)
+        // Using polymorphic relationship: order_items can be either Dish or ComboSelection
+        // Filter by orderable_type to get only dish-based orders for this metric
         $topDishes = OrderItem::whereHas('order', function ($query) use ($restaurantId, $startDate, $endDate) {
                 $query->where('restaurant_id', $restaurantId)
                     ->whereBetween('created_at', [$startDate, $endDate])
                     ->where('status', '!=', 'cancelled');
             })
-            ->join('dishes', 'order_items.dish_id', '=', 'dishes.id')
+            ->where('order_items.orderable_type', Dish::class)
+            ->join('dishes', 'order_items.orderable_id', '=', 'dishes.id')
             ->select('dishes.id', 'dishes.name', DB::raw('sum(order_items.quantity) as total_quantity'))
             ->groupBy('dishes.id', 'dishes.name')
             ->orderByDesc('total_quantity')

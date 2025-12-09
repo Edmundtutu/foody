@@ -31,7 +31,7 @@ class DishService
                 ->where('id', $categoryId)
                 ->whereNull('deleted_at')
                 ->exists();
-            
+
             if ($categoryExists) {
                 $query->where('dishes.category_id', $categoryId);
             } else {
@@ -49,8 +49,8 @@ class DishService
             $searchTerm = '%' . trim($filters['name']) . '%';
             $query->where(function ($q) use ($searchTerm) {
                 $q->where('dishes.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.address', 'like', $searchTerm);
+                    ->orWhere('restaurants.name', 'like', $searchTerm)
+                    ->orWhere('restaurants.address', 'like', $searchTerm);
             });
         }
 
@@ -130,7 +130,12 @@ class DishService
         // First, get dish IDs with scoring
         $subquery = DB::table('dishes')
             ->select('dishes.id')
-            ->leftJoin('order_items', 'dishes.id', '=', 'order_items.dish_id')
+            // Polymorphic join: order_items can reference either Dish or ComboSelection
+            // Filter by orderable_type to get only dish orders
+            ->leftJoin('order_items', function ($join) {
+                $join->on('dishes.id', '=', 'order_items.orderable_id')
+                    ->where('order_items.orderable_type', '=', Dish::class);
+            })
             ->leftJoin('orders', 'order_items.order_id', '=', 'orders.id')
             ->leftJoin('reviews', function ($join) {
                 $join->on('dishes.id', '=', 'reviews.reviewable_id')
@@ -151,7 +156,7 @@ class DishService
                 ->where('id', $categoryId)
                 ->whereNull('deleted_at')
                 ->exists();
-            
+
             if ($categoryExists) {
                 $subquery->where('dishes.category_id', $categoryId);
             } else {
@@ -176,8 +181,8 @@ class DishService
             $searchTerm = '%' . trim($filters['name']) . '%';
             $subquery->where(function ($q) use ($searchTerm) {
                 $q->where('dishes.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.address', 'like', $searchTerm);
+                    ->orWhere('restaurants.name', 'like', $searchTerm)
+                    ->orWhere('restaurants.address', 'like', $searchTerm);
             });
         }
 
@@ -223,7 +228,11 @@ class DishService
         // First, get dish IDs ordered by order count
         $subquery = DB::table('dishes')
             ->select('dishes.id')
-            ->join('order_items', 'dishes.id', '=', 'order_items.dish_id')
+            // Polymorphic join: only include order items where orderable is a Dish (not ComboSelection)
+            ->join('order_items', function ($join) {
+                $join->on('dishes.id', '=', 'order_items.orderable_id')
+                    ->where('order_items.orderable_type', '=', Dish::class);
+            })
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('dishes.available', true)
             ->where('orders.created_at', '>=', now()->subDays(30)) // Last 30 days
@@ -241,7 +250,7 @@ class DishService
                 ->where('id', $categoryId)
                 ->whereNull('deleted_at')
                 ->exists();
-            
+
             if ($categoryExists) {
                 $subquery->where('dishes.category_id', $categoryId);
             } else {
@@ -266,8 +275,8 @@ class DishService
             $searchTerm = '%' . trim($filters['name']) . '%';
             $subquery->where(function ($q) use ($searchTerm) {
                 $q->where('dishes.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.address', 'like', $searchTerm);
+                    ->orWhere('restaurants.name', 'like', $searchTerm)
+                    ->orWhere('restaurants.address', 'like', $searchTerm);
             });
         }
 
@@ -313,7 +322,11 @@ class DishService
         // First, get dish IDs ordered by most recent order
         $subquery = DB::table('dishes')
             ->select('dishes.id')
-            ->join('order_items', 'dishes.id', '=', 'order_items.dish_id')
+            // Polymorphic relationship: filter order_items to only dishes (excludes combo selections)
+            ->join('order_items', function ($join) {
+                $join->on('dishes.id', '=', 'order_items.orderable_id')
+                    ->where('order_items.orderable_type', '=', Dish::class);
+            })
             ->join('orders', 'order_items.order_id', '=', 'orders.id')
             ->where('orders.user_id', $userId)
             ->where('dishes.available', true)
@@ -331,7 +344,7 @@ class DishService
                 ->where('id', $categoryId)
                 ->whereNull('deleted_at')
                 ->exists();
-            
+
             if ($categoryExists) {
                 $subquery->where('dishes.category_id', $categoryId);
             } else {
@@ -351,8 +364,8 @@ class DishService
             $searchTerm = '%' . trim($filters['name']) . '%';
             $subquery->where(function ($q) use ($searchTerm) {
                 $q->where('dishes.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.name', 'like', $searchTerm)
-                  ->orWhere('restaurants.address', 'like', $searchTerm);
+                    ->orWhere('restaurants.name', 'like', $searchTerm)
+                    ->orWhere('restaurants.address', 'like', $searchTerm);
             });
         }
 

@@ -39,7 +39,17 @@ class ComboPolicy
      */
     public function update(User $user, Combo $combo): bool
     {
-        return $this->canManage($user);
+        if (!$this->canManage($user)) {
+            return false;
+        }
+
+        // Admin can update any combo
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        // Restaurant owner can only update their own restaurant's combos
+        return $combo->restaurant->owner_id === $user->id;
     }
 
     /**
@@ -47,7 +57,17 @@ class ComboPolicy
      */
     public function delete(User $user, Combo $combo): bool
     {
-        return $this->canManage($user);
+        if (!$this->canManage($user)) {
+            return false;
+        }
+
+        // Admin can delete any combo
+        if ($user->role === 'admin') {
+            return true;
+        }
+
+        // Restaurant owner can only delete their own restaurant's combos
+        return $combo->restaurant->owner_id === $user->id;
     }
 
     /**

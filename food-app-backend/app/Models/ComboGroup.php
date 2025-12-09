@@ -46,7 +46,7 @@ class ComboGroup extends Model
             'combo_group_category_hints',
             'combo_group_id',
             'category_id'
-        );
+        )->using(ComboGroupCategoryHint::class)->withTimestamps();
     }
 
 }

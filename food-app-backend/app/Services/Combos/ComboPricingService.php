@@ -99,6 +99,7 @@ class ComboPricingService
         return [
             'combo_id' => $combo->id,
             'pricing_mode' => $combo->pricing_mode,
+            'base_price' => (int) $combo->base_price,
             'total' => $total,
             'breakdown' => $breakdown,
             'items' => $lineItems,
@@ -169,7 +170,7 @@ class ComboPricingService
         return match ($combo->pricing_mode) {
             'FIXED' => (int) $combo->base_price + $breakdown['options_surcharges'],
             'HYBRID' => (int) $combo->base_price + $breakdown['dish_surcharges'] + $breakdown['options_surcharges'],
-            default => $breakdown['dish_base'] + $breakdown['options_surcharges'],
+            default => $breakdown['dish_base'] + $breakdown['dish_surcharges'] + $breakdown['options_surcharges'],
         };
     }
 

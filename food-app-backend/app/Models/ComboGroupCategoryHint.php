@@ -4,9 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUlids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Pivot;
 
-class ComboGroupCategoryHint extends Model
+class ComboGroupCategoryHint extends Pivot
 {
     use HasFactory, HasUlids;
 
@@ -14,6 +14,8 @@ class ComboGroupCategoryHint extends Model
         'combo_group_id',
         'category_id'
     ];
+
+    public $incrementing = false;
 
     public function group()
     {

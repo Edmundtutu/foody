@@ -52,7 +52,8 @@ class OrderSeeder extends Seeder
 
                 OrderItem::factory()->create([
                     'order_id' => $order->id,
-                    'dish_id' => $dish->id,
+                    'orderable_type' => \App\Models\Dish::class,
+                    'orderable_id' => $dish->id,
                     'quantity' => $quantity,
                     'unit_price' => $unitPrice,
                     'total_price' => $totalPrice,

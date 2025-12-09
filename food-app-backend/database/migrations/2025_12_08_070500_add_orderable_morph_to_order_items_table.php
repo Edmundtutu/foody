@@ -27,6 +27,7 @@ return new class extends Migration
         Schema::table('order_items', function (Blueprint $table) {
             if (Schema::hasColumn('order_items', 'dish_id')) {
                 $table->dropForeign(['dish_id']);
+                $table->dropIndex('order_items_dish_id_index');
                 $table->dropColumn('dish_id');
             }
         });

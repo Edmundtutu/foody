@@ -71,11 +71,12 @@ class ComboService
 
     protected function extractComboData(array $data, bool $isUpdate = false): array
     {
-        $fields = ['name', 'description', 'pricing_mode', 'base_price'];
+        $fields = ['restaurant_id', 'name', 'description', 'pricing_mode', 'base_price', 'available'];
         $payload = Arr::only($data, $fields);
 
         if (!$isUpdate) {
             $payload['pricing_mode'] = $payload['pricing_mode'] ?? 'FIXED';
+            $payload['available'] = $payload['available'] ?? true;
         }
 
         if (isset($payload['pricing_mode'])) {

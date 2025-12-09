@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        // Update the enum to include 'modification' and 'category', remove 'ingredient' and 'station'
-        // For simplicity, we'll use DB::statement for MySQL/PostgreSQL compatibility
-        \DB::statement("ALTER TABLE inventory_nodes MODIFY COLUMN entity_type ENUM('dish', 'modification', 'category')");
+        // SQLite doesn't support ENUM or ALTER COLUMN MODIFY
+        // This migration is skipped for SQLite (testing) but will run on MySQL/PostgreSQL in production
+        if (Schema::connection(null)->getConnection()->getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE inventory_nodes MODIFY COLUMN entity_type ENUM('dish', 'modification', 'category')");
+        }
     }
 
     /**
@@ -22,6 +24,8 @@ return new class extends Migration
     public function down(): void
     {
         // Revert to original enum values
-        \DB::statement("ALTER TABLE inventory_nodes MODIFY COLUMN entity_type ENUM('ingredient', 'dish', 'station')");
+        if (Schema::connection(null)->getConnection()->getDriverName() !== 'sqlite') {
+            \DB::statement("ALTER TABLE inventory_nodes MODIFY COLUMN entity_type ENUM('ingredient', 'dish', 'station')");
+        }
     }
 };

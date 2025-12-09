@@ -13,14 +13,17 @@ class Combo extends Model
     use HasFactory, HasUlids;
 
     protected $fillable = [
+        'restaurant_id',
         'name',
         'description',
         'pricing_mode',
-        'base_price'
+        'base_price',
+        'available',
     ];
 
     protected $casts = [
         'base_price' => 'integer',
+        'available' => 'boolean',
     ];
 
     /**
@@ -39,6 +42,14 @@ class Combo extends Model
     public function selections(): HasMany
     {
         return $this->hasMany(ComboSelection::class);
+    }
+
+    /**
+     * Restaurant that owns this combo
+     */
+    public function restaurant()
+    {
+        return $this->belongsTo(Restaurant::class);
     }
 
 }

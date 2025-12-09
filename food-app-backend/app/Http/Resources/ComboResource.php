@@ -16,10 +16,12 @@ class ComboResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'restaurant_id' => $this->restaurant_id,
             'name' => $this->name,
             'description' => $this->description,
             'pricing_mode' => $this->pricing_mode,
             'base_price' => $this->base_price,
+            'available' => (bool) $this->available,
             'groups' => ComboGroupResource::collection($this->whenLoaded('groups')),
             'selections' => ComboSelectionResource::collection($this->whenLoaded('selections')),
             'created_at' => $this->created_at,

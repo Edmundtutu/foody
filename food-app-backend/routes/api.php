@@ -41,6 +41,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/combos', [ComboController::class, 'index']);
     Route::get('/combos/{combo}', [ComboController::class, 'show']);
     Route::post('/combos/{combo}/calculate', ComboCalculationController::class);
+    Route::get('/restaurants/{id}/combos', [ComboController::class, 'getRestaurantCombos']);
 
     // Authenticated endpoints
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -85,6 +86,11 @@ Route::prefix('v1')->group(function () {
         Route::put('/combos/{combo}', [ComboController::class, 'update']);
         Route::delete('/combos/{combo}', [ComboController::class, 'destroy']);
 
+        // Combo groups - direct access
+        Route::put('/combo-groups/{group}', [ComboGroupController::class, 'updateDirect']);
+        Route::delete('/combo-groups/{group}', [ComboGroupController::class, 'destroyDirect']);
+        Route::post('/combo-groups/{group}/items', [ComboGroupItemController::class, 'storeDirect']);
+
         Route::prefix('combos/{combo}')->group(function () {
             Route::get('/groups', [ComboGroupController::class, 'index']);
             Route::post('/groups', [ComboGroupController::class, 'store']);
@@ -96,7 +102,8 @@ Route::prefix('v1')->group(function () {
             Route::put('/groups/{group}/items/{item}', [ComboGroupItemController::class, 'update']);
             Route::delete('/groups/{group}/items/{item}', [ComboGroupItemController::class, 'destroy']);
 
-            Route::post('/order', [ComboSelectionController::class, 'store']);
+            Route::post('/selections', [ComboSelectionController::class, 'store']);
+            Route::post('/order', [ComboSelectionController::class, 'store']); // Alias for backward compatibility
         });
 
         // Orders

@@ -40,6 +40,16 @@ class ComboGroupItemController extends Controller
         return $this->success(new ComboGroupItemResource($item), 'Combo group item created successfully', 201);
     }
 
+    public function storeDirect(StoreComboGroupItemRequest $request, ComboGroup $group)
+    {
+        $combo = $group->combo;
+        $this->authorize('update', $combo);
+
+        $item = $this->itemService->create($group, $request->validated());
+
+        return $this->success(new ComboGroupItemResource($item), 'Combo group item created successfully', 201);
+    }
+
     public function update(UpdateComboGroupItemRequest $request, Combo $combo, ComboGroup $group, ComboGroupItem $item)
     {
         $this->authorize('update', $combo);

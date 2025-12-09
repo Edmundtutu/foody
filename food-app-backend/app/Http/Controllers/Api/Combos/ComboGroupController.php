@@ -47,10 +47,30 @@ class ComboGroupController extends Controller
         return $this->success(new ComboGroupResource($group), 'Combo group updated successfully');
     }
 
+    public function updateDirect(UpdateComboGroupRequest $request, ComboGroup $group)
+    {
+        $combo = $group->combo;
+        $this->authorize('update', $combo);
+
+        $group = $this->groupService->update($group, $request->validated());
+
+        return $this->success(new ComboGroupResource($group), 'Combo group updated successfully');
+    }
+
     public function destroy(Combo $combo, ComboGroup $group)
     {
         $this->authorize('update', $combo);
         $this->ensureComboOwnership($combo, $group);
+
+        $this->groupService->delete($group);
+
+        return $this->success(null, 'Combo group deleted successfully');
+    }
+
+    public function destroyDirect(ComboGroup $group)
+    {
+        $combo = $group->combo;
+        $this->authorize('update', $combo);
 
         $this->groupService->delete($group);
 
