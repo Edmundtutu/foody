@@ -13,7 +13,7 @@ return new class extends Migration
     {
         Schema::create('inventory_nodes', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignUlid('restaurant_id')->constrained();
+            $table->foreignUlid('restaurant_id')->constrained()->onDelete('cascade');
             $table->enum('entity_type', ['ingredient', 'dish', 'station']);
             $table->char('entity_id', 26)->nullable();
             $table->string('display_name')->nullable();

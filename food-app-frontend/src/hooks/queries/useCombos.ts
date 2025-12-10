@@ -7,6 +7,8 @@ import menuService, {
     type CreateComboGroupData,
     type UpdateComboGroupData,
     type CreateComboGroupItemData,
+    type ComboPriceRequest,
+    type ComboPriceCalculation,
 } from '@/services/menuService';
 
 /**
@@ -187,3 +189,14 @@ export function useDeleteComboGroupItem() {
         },
     });
 }
+
+/**
+ * Hook to calculate combo price based on selections
+ */
+export function useCalculateComboPrice() {
+    return useMutation({
+        mutationFn: ({ comboId, selections }: { comboId: string; selections: ComboPriceRequest }) =>
+            menuService.calculateComboPrice(comboId, selections),
+    });
+}
+

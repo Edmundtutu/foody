@@ -13,9 +13,9 @@ return new class extends Migration
     {
         Schema::create('inventory_node_edges', function (Blueprint $table) {
             $table->ulid('id')->primary();
-            $table->foreignUlid('restaurant_id')->constrained();
-            $table->foreignUlid('source_node_id')->constrained('inventory_nodes');
-            $table->foreignUlid('target_node_id')->constrained('inventory_nodes');
+            $table->foreignUlid('restaurant_id')->constrained()->onDelete('cascade');
+            $table->foreignUlid('source_node_id')->constrained('inventory_nodes')->onDelete('cascade');
+            $table->foreignUlid('target_node_id')->constrained('inventory_nodes')->onDelete('cascade');
             $table->string('label')->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();

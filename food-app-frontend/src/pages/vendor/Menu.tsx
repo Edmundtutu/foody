@@ -1,16 +1,6 @@
 import React, { useState, useRef } from 'react';
-import { useForm } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,15 +9,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -38,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { SelectSeparator, SelectGroup, SelectLabel } from "@/components/ui/select";
 import {
   Tabs,
   TabsContent,
@@ -53,17 +35,18 @@ import {
   Package,
   AlertCircle,
   ChefHat,
-  Upload,
   X,
-  Star,
   Image as ImageIcon,
   Menu,
   Search,
   Check,
-  Copy,
   MoreVertical,
   Download,
   FileText,
+  Scale,
+  Calculator,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useVendor } from '@/context/VendorContext';
 import {
@@ -88,244 +71,27 @@ import {
   useDeleteComboGroup,
   useCreateComboGroupItem,
   useDeleteComboGroupItem,
+  useCalculateComboPrice,
 } from '@/hooks/queries/useCombos';
 import { useCreateNode } from '@/hooks/queries/useKitchenNodes';
 import { MenuItemsSkeleton } from '@/components/vendor/LoadingSkeletons';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
-import type { MenuCategory, Dish, Combo } from '@/services/menuService';
+import type { MenuCategory, Dish, Combo, ComboPriceCalculation, ComboPriceLineItem } from '@/services/menuService';
 import kitchenService from '@/services/kitchenService';
 import uploadService from '@/services/uploadService';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import type { CategoryFormData, DishFormData } from '@/types/menu';
+import { getImageUrl, getPricingModeFormula } from '@/utils/pricingUtils';
+import { ComboCard, DishSelectorModal } from '@/components/vendor/menu/combos';
+import { CategoryFormDialog } from '@/components/vendor/menu/categories';
+import { DishFormDialog } from '@/components/vendor/menu/dishes';
 
-interface CategoryFormData {
-  name: string;
-  description?: string;
-  display_order?: number;
-  color_code?: string;
-}
-
-interface DishFormData {
-  name: string;
-  description?: string;
-  category_id: string;
-  price: number;
-  unit?: string;
-  available: boolean;
-  addToKitchen?: boolean;
-  images?: string[];
-}
-
-// Helper function to format date from ISO string to readable format
-const formatDate = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toISOString().split('T')[0];
-  } catch {
-    return dateString;
-  }
-};
-
-// Helper function to get full image URL
-const getImageUrl = (url: string | null | undefined): string | null => {
-  if (!url) return null;
-  // If URL is already absolute (starts with http:// or https://), use it directly
-  if (url.startsWith('http://') || url.startsWith('https://')) {
-    return url;
-  }
-  // If relative URL (shouldn't happen if backend is correct, but handle as fallback)
-  // Only prepend if it's a relative path starting with /storage
-  if (url.startsWith('/storage/')) {
-    const apiBaseUrl = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    return `${apiBaseUrl}${url}`;
-  }
-  // If it's a malformed URL or just a path, return null to avoid broken images
-  return null;
-};
-
-// ========== COMBO COMPONENTS ==========
-interface ComboCardProps {
-  combo: Combo;
-  dishes: Dish[];
-  onEdit: (combo: Combo) => void;
-  onDuplicate: (combo: Combo) => void;
-  onToggleStatus: (comboId: string) => void;
-  onDelete: (comboId: string) => void;
-}
-
-const ComboCard: React.FC<ComboCardProps> = ({ combo, onEdit, onDuplicate, onToggleStatus, onDelete }) => {
-
-  return (
-    <Card className="overflow-hidden hover:shadow-md transition-shadow h-full border">
-      <div className="p-4">
-        <div className="flex justify-between items-start mb-3">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 mb-1">
-              <h3 className="font-bold text-lg text-gray-800">{combo.name}</h3>
-              <Badge
-                variant={combo.available ? "default" : "secondary"}
-                className={combo.available ? "bg-green-500 hover:bg-green-600" : ""}
-              >
-                {combo.available ? 'Active' : 'Inactive'}
-              </Badge>
-              <Badge
-                variant="outline"
-                className={`
-                  ${combo.pricing_mode === 'FIXED' ? 'bg-green-50 text-green-700 border-green-200' : ''}
-                  ${combo.pricing_mode === 'DYNAMIC' ? 'bg-blue-50 text-blue-700 border-blue-200' : ''}
-                  ${combo.pricing_mode === 'HYBRID' ? 'bg-purple-50 text-purple-700 border-purple-200' : ''}
-                `}
-              >
-                {combo.pricing_mode}
-              </Badge>
-            </div>
-            <p className="text-sm text-gray-600 mb-3 line-clamp-2">{combo.description}</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-3 mb-4">
-          <div className="bg-gray-50 p-2 rounded">
-            <p className="text-xs text-gray-500">Base Price</p>
-            <p className="font-bold text-gray-800">UGX {combo.base_price.toLocaleString()}</p>
-          </div>
-          <div className="bg-gray-50 p-2 rounded">
-            <p className="text-xs text-gray-500">Groups</p>
-            <p className="font-bold text-gray-800">{combo.groups?.length || 0}</p>
-          </div>
-        </div>
-
-        {combo.groups && combo.groups.length > 0 && (
-          <div className="mb-4">
-            <p className="text-xs text-gray-500 mb-2">Groups</p>
-            <div className="space-y-1">
-              {combo.groups.slice(0, 2).map(group => (
-                <div key={group.id} className="flex items-center justify-between p-2 bg-gray-50 rounded text-sm">
-                  <span className="font-medium text-gray-700 truncate">{group.name}</span>
-                  <span className="text-xs text-gray-500">
-                    {group.items?.length || 0} items
-                  </span>
-                </div>
-              ))}
-              {combo.groups.length > 2 && (
-                <div className="text-center text-xs text-gray-500 py-1">
-                  +{combo.groups.length - 2} more groups
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <div className="flex items-center justify-between pt-3 border-t">
-          <div className="text-xs text-gray-500">
-            Updated: {formatDate(combo.updated_at)}
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onEdit(combo)}
-              title="Edit Combo"
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onDuplicate(combo)}
-              title="Duplicate Combo"
-            >
-              <Copy className="h-4 w-4" />
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => onToggleStatus(combo.id)}
-              title={combo.available ? 'Deactivate' : 'Activate'}
-            >
-              {combo.available ? <X className="h-4 w-4" /> : <Check className="h-4 w-4" />}
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-destructive hover:text-destructive"
-              onClick={() => onDelete(combo.id)}
-              title="Delete Combo"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </Card>
-  );
-};
-
-interface DishSelectorProps {
-  dishes: Dish[];
-  selectedDishes: string[];
-  onDishToggle: (dishId: string) => void;
-  categoryFilter?: string;
-}
-
-const DishSelector: React.FC<DishSelectorProps> = ({ dishes, selectedDishes, onDishToggle, categoryFilter }) => {
-  const filteredDishes = categoryFilter
-    ? dishes.filter(dish => dish.category?.name === categoryFilter)
-    : dishes;
-
-  return (
-    <div className="max-h-60 overflow-y-auto border rounded-lg">
-      {filteredDishes.length === 0 ? (
-        <div className="p-4 text-center text-gray-500 text-sm">
-          No dishes available{categoryFilter ? ` in ${categoryFilter}` : ''}
-        </div>
-      ) : (
-        filteredDishes.map(dish => (
-          <div
-            key={dish.id}
-            className={`flex items-center justify-between p-3 border-b last:border-0 hover:bg-gray-50 cursor-pointer ${selectedDishes.includes(dish.id) ? 'bg-blue-50' : ''
-              }`}
-            onClick={() => onDishToggle(dish.id)}
-          >
-            <div className="flex-1">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-800">{dish.name}</p>
-                  <p className="text-xs text-gray-500">{dish.category?.name || 'No category'}</p>
-                </div>
-                <div className="text-right">
-                  <p className="font-bold text-gray-800">UGX {dish.price.toLocaleString()}</p>
-                  <div className="flex items-center gap-2">
-                    {!dish.available && (
-                      <Badge variant="secondary" className="bg-red-100 text-red-800">
-                        Unavailable
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className={`ml-4 w-5 h-5 rounded border flex items-center justify-center ${selectedDishes.includes(dish.id)
-              ? 'bg-blue-600 border-blue-600'
-              : 'border-gray-300'
-              }`}>
-              {selectedDishes.includes(dish.id) && (
-                <Check className="h-3 w-3 text-white" />
-              )}
-            </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
-};
-
+// ========== COMBO FORM COMPONENT ==========
 interface ComboFormProps {
   combo: Combo | null;
   dishes: Dish[];
@@ -333,9 +99,10 @@ interface ComboFormProps {
   onSave: (combo: Combo) => void;
   onCancel: () => void;
   isEditing: boolean;
+  isSaving?: boolean;
 }
 
-const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave, onCancel, isEditing }) => {
+const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave, onCancel, isEditing, isSaving = false }) => {
   // Form state
   const [formData, setFormData] = useState<Combo>(combo || {
     id: Date.now().toString(),
@@ -353,6 +120,17 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [showDishSelector, setShowDishSelector] = useState<string | null>(null);
   const [selectedDishes, setSelectedDishes] = useState<string[]>([]);
+  const [showPriceCalculator, setShowPriceCalculator] = useState(false);
+  const [calculatedPrice, setCalculatedPrice] = useState<ComboPriceCalculation | null>(null);
+  const [showModeComparison, setShowModeComparison] = useState(false);
+  const [priceCalcSelections, setPriceCalcSelections] = useState<Record<string, string>>({});
+  const [modeComparisonPrices, setModeComparisonPrices] = useState<{
+    FIXED: ComboPriceCalculation | null;
+    DYNAMIC: ComboPriceCalculation | null;
+    HYBRID: ComboPriceCalculation | null;
+  }>({ FIXED: null, DYNAMIC: null, HYBRID: null });
+
+  const calculatePriceMutation = useCalculateComboPrice();
 
   const handleInputChange = (field: keyof Combo, value: any) => {
     setFormData(prev => ({
@@ -509,18 +287,105 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
     onSave(formData);
   };
 
+  // Handle calculate price
+  const handleCalculatePrice = async (mode?: 'FIXED' | 'DYNAMIC' | 'HYBRID') => {
+    // Validate that we have all required data
+    if (!combo?.id) {
+      toast.error('Cannot calculate price: Combo not saved yet');
+      return null;
+    }
+
+    if (!formData.groups || formData.groups.length === 0) {
+      toast.error('Please add at least one group with dishes');
+      return null;
+    }
+
+    // Build selections payload using interactive selections or first item from each group
+    const groups = formData.groups.map(group => {
+      let selectedDishId = priceCalcSelections[group.id];
+
+      // If no selection, use first item
+      if (!selectedDishId) {
+        const firstItem = group.items?.[0];
+        if (!firstItem) return null;
+        selectedDishId = String(firstItem.dish_id);
+      }
+
+      return {
+        group_id: group.id,
+        selected: [
+          {
+            dish_id: selectedDishId,
+            option_ids: [] as string[]
+          }
+        ]
+      };
+    }).filter((g): g is NonNullable<typeof g> => g !== null);
+
+    if (groups.length === 0) {
+      toast.error('Please add dishes to groups');
+      return null;
+    }
+
+    try {
+      const result = await calculatePriceMutation.mutateAsync({
+        comboId: combo.id.toString(),
+        selections: { groups }
+      });
+
+      if (!mode) {
+        setCalculatedPrice(result);
+        toast.success('Price calculated successfully');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Price calculation error:', error);
+      if (!mode) {
+        toast.error('Failed to calculate price');
+      }
+      return null;
+    }
+  };
+
+  // Handle pricing mode comparison
+  const handleCompareModesCalculation = async () => {
+    if (!combo?.id) {
+      toast.error('Cannot compare modes: Combo not saved yet');
+      return;
+    }
+
+    setShowModeComparison(true);
+    toast.info('Calculating prices for all modes...');
+
+    // Calculate for all three modes in parallel
+    const [fixedResult, dynamicResult, hybridResult] = await Promise.all([
+      handleCalculatePrice('FIXED'),
+      handleCalculatePrice('DYNAMIC'),
+      handleCalculatePrice('HYBRID')
+    ]);
+
+    setModeComparisonPrices({
+      FIXED: fixedResult,
+      DYNAMIC: dynamicResult,
+      HYBRID: hybridResult
+    });
+
+    toast.success('Mode comparison ready!');
+  };
+
   // Filter dishes for selector based on suggested categories
   const getFilteredDishesForGroup = (groupId: string) => {
     const group = formData.groups?.find(g => g.id === groupId);
     if (!group) return dishes;
 
     const suggestedCategoryIds = group.suggested_categories?.map(c => c.id) || [];
-    
+
     if (suggestedCategoryIds.length === 0) {
       return dishes;
     }
 
-    return dishes.filter(dish => 
+    return dishes.filter(dish =>
       dish.category_id && suggestedCategoryIds.includes(dish.category_id)
     );
   };
@@ -588,7 +453,14 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
                   value={formData.base_price}
                   onChange={(e) => handleInputChange('base_price', parseInt(e.target.value) || 0)}
                   min="0"
+                  disabled={formData.pricing_mode === 'DYNAMIC'}
+                  className={formData.pricing_mode === 'DYNAMIC' ? 'bg-gray-100 cursor-not-allowed' : ''}
                 />
+                {formData.pricing_mode === 'DYNAMIC' && (
+                  <p className="text-xs text-amber-600 mt-1">
+                    Base price is not used in DYNAMIC mode
+                  </p>
+                )}
               </div>
 
               <div className="flex items-center">
@@ -676,16 +548,56 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
                     {expandedGroup === group.id && (
                       <div className="p-4 border-t">
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                          <div className="space-y-2">
+                            <label className="block text-sm font-medium text-gray-700">
                               Group Name *
                             </label>
-                            <Input
-                              type="text"
-                              value={group.name}
-                              onChange={(e) => handleUpdateGroup(group.id, { name: e.target.value })}
-                              placeholder="e.g., Proteins, Starches"
-                            />
+
+                            <div className="flex rounded-lg border border-input overflow-hidden focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2">
+                              <input
+                                type="text"
+                                value={group.name}
+                                onChange={(e) => handleUpdateGroup(group.id, { name: e.target.value })}
+                                placeholder="Enter group name..."
+                                className="flex-1 px-3 py-2 text-sm outline-none bg-transparent"
+                              />
+
+                              <div className="relative border-l">
+                                <Select
+                                  onValueChange={(categoryId) => {
+                                    const selectedCategory = categories.find(c => c.id === categoryId);
+                                    if (selectedCategory) {
+                                      const autoName = `Pick ${group.allowed_max} from ${selectedCategory.name}`;
+                                      handleUpdateGroup(group.id, { name: autoName });
+                                      const currentHints = group.suggested_categories?.map(c => c.id) || [];
+                                      if (!currentHints.includes(categoryId)) {
+                                        handleToggleCategoryHint(group.id, categoryId);
+                                      }
+                                    }
+                                  }}
+                                >
+                                  <SelectTrigger className="h-full border-0 rounded-none px-3 py-2 text-sm bg-muted/50 hover:bg-muted">
+                                    <SelectValue placeholder="Quick" />
+                                  </SelectTrigger>
+                                  <SelectContent align="end">
+                                    <SelectItem value="custom">Custom name</SelectItem>
+                                    <SelectSeparator />
+                                    <SelectGroup>
+                                      <SelectLabel>Auto-name from category:</SelectLabel>
+                                      {categories.map((category) => (
+                                        <SelectItem key={category.id} value={category.id}>
+                                          {category.name}
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <p className="text-xs text-gray-500">
+                              Type custom name or use Quick to auto-generate from category
+                            </p>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2">
@@ -707,7 +619,19 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
                               <Input
                                 type="number"
                                 value={group.allowed_max}
-                                onChange={(e) => handleUpdateGroup(group.id, { allowed_max: parseInt(e.target.value) || 0 })}
+                                onChange={(e) => {
+                                  const newMax = parseInt(e.target.value) || 0;
+                                  handleUpdateGroup(group.id, { allowed_max: newMax });
+
+                                  // Update auto-generated name if it follows the pattern
+                                  if (group.name.match(/^Pick \d+ from /)) {
+                                    const categoryMatch = group.name.match(/from (.+)$/);
+                                    if (categoryMatch) {
+                                      const categoryName = categoryMatch[1];
+                                      handleUpdateGroup(group.id, { name: `Pick ${newMax} from ${categoryName}` });
+                                    }
+                                  }
+                                }}
                                 min="0"
                               />
                             </div>
@@ -809,6 +733,250 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
               </div>
             )}
           </div>
+
+          {/* Live Price Calculator */}
+          {combo?.id && (
+            <div className="mb-8">
+              <Collapsible
+                open={showPriceCalculator}
+                onOpenChange={setShowPriceCalculator}
+              >
+                <div className="border rounded-lg bg-gradient-to-r from-green-50 to-blue-50">
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full flex items-center justify-between p-4 hover:bg-white/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calculator className="h-5 w-5 text-green-600" />
+                        <span className="font-semibold text-gray-800">Price Calculator</span>
+                        <Badge variant="outline" className="ml-2">
+                          {formData.pricing_mode}
+                        </Badge>
+                      </div>
+                      {showPriceCalculator ? (
+                        <ChevronUp className="h-5 w-5 text-gray-500" />
+                      ) : (
+                        <ChevronDown className="h-5 w-5 text-gray-500" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+
+                  <CollapsibleContent>
+                    <div className="p-4 space-y-4 border-t">
+                      {/* Interactive Dish Selection for Calculator */}
+                      {formData.groups && formData.groups.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-sm font-medium text-gray-700">Select dishes to calculate price:</p>
+                          {formData.groups.map((group) => (
+                            <div key={group.id} className="space-y-2">
+                              <label className="text-xs font-medium text-gray-600">{group.name}</label>
+                              <Select
+                                value={priceCalcSelections[group.id] || String(group.items?.[0]?.dish_id || '')}
+                                onValueChange={(value) => {
+                                  setPriceCalcSelections({ ...priceCalcSelections, [group.id]: value });
+                                }}
+                              >
+                                <SelectTrigger className="h-9">
+                                  <SelectValue placeholder="Select a dish" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {group.items?.map((item) => {
+                                    const dish = dishes.find(d => d.id === item.dish_id);
+                                    return (
+                                      <SelectItem key={item.id} value={String(item.dish_id)}>
+                                        {dish?.name || `Dish #${item.dish_id}`}
+                                        {item.extra_price > 0 && ` (+UGX ${item.extra_price})`}
+                                      </SelectItem>
+                                    );
+                                  })}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex gap-2">
+                        <Button
+                          onClick={() => handleCalculatePrice()}
+                          disabled={calculatePriceMutation.isPending || !formData.groups?.length}
+                          className="flex items-center gap-2"
+                        >
+                          <Calculator className="h-4 w-4" />
+                          {calculatePriceMutation.isPending ? 'Calculating...' : 'Calculate Price'}
+                        </Button>
+
+                        <Button
+                          onClick={handleCompareModesCalculation}
+                          variant="outline"
+                          disabled={calculatePriceMutation.isPending || !formData.groups?.length}
+                          className="flex items-center gap-2"
+                        >
+                          <Scale className="h-4 w-4" />
+                          Compare Modes
+                        </Button>
+                      </div>
+
+                      {calculatedPrice && (
+                        <div className="space-y-3 p-4 bg-white rounded-lg border">
+                          <div className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-700">Price Breakdown</span>
+                            <Badge className="text-base px-3 py-1">
+                              UGX {calculatedPrice.total.toLocaleString()}
+                            </Badge>
+                          </div>
+
+                          <div className="space-y-2 text-sm">
+                            {calculatedPrice.breakdown.combo_base > 0 && (
+                              <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
+                                <span className="text-gray-700">Combo Base Price</span>
+                                <span className="font-medium">UGX {calculatedPrice.breakdown.combo_base.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {calculatedPrice.breakdown.dish_base > 0 && (
+                              <div className="flex justify-between items-center p-2 bg-green-50 rounded">
+                                <span className="text-gray-700">Dish Base Prices</span>
+                                <span className="font-medium">UGX {calculatedPrice.breakdown.dish_base.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {calculatedPrice.breakdown.dish_surcharges > 0 && (
+                              <div className="flex justify-between items-center p-2 bg-yellow-50 rounded">
+                                <span className="text-gray-700">Dish Extra Prices</span>
+                                <span className="font-medium">UGX {calculatedPrice.breakdown.dish_surcharges.toLocaleString()}</span>
+                              </div>
+                            )}
+
+                            {calculatedPrice.breakdown.options_surcharges > 0 && (
+                              <div className="flex justify-between items-center p-2 bg-purple-50 rounded">
+                                <span className="text-gray-700">Options Surcharges</span>
+                                <span className="font-medium">UGX {calculatedPrice.breakdown.options_surcharges.toLocaleString()}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {calculatedPrice.items && calculatedPrice.items.length > 0 && (
+                            <details className="text-sm">
+                              <summary className="cursor-pointer text-gray-600 hover:text-gray-800 font-medium">
+                                View Item Details ({calculatedPrice.items.length} items)
+                              </summary>
+                              <div className="mt-2 space-y-1 pl-4 border-l-2 border-gray-200">
+                                {calculatedPrice.items.map((item: ComboPriceLineItem, idx: number) => (
+                                  <div key={idx} className="flex justify-between text-xs">
+                                    <span className="text-gray-600">{item.dish_name}</span>
+                                    <span className="font-medium">UGX {item.line_total.toLocaleString()}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+
+                          <div className="pt-2 border-t text-xs text-gray-500">
+                            Formula: {getPricingModeFormula(calculatedPrice.pricing_mode)}
+                          </div>
+                        </div>
+                      )}
+
+                      {!calculatedPrice && !calculatePriceMutation.isPending && (
+                        <p className="text-sm text-gray-500 italic">
+                          Select dishes from each group and click "Calculate Price" to see a detailed breakdown
+                        </p>
+                      )}
+
+                      {/* Pricing Mode Comparison */}
+                      {showModeComparison && (modeComparisonPrices.FIXED || modeComparisonPrices.DYNAMIC || modeComparisonPrices.HYBRID) && (
+                        <div className="mt-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border space-y-3">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-semibold text-gray-800">Pricing Mode Comparison</h4>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setShowModeComparison(false);
+                                setModeComparisonPrices({ FIXED: null, DYNAMIC: null, HYBRID: null });
+                              }}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-3">
+                            {(['FIXED', 'DYNAMIC', 'HYBRID'] as const).map((mode) => {
+                              const modePrice = modeComparisonPrices[mode];
+                              const isCurrentMode = formData.pricing_mode === mode;
+
+                              return (
+                                <div
+                                  key={mode}
+                                  className={`p-3 rounded-lg border-2 ${isCurrentMode
+                                    ? 'bg-white border-green-500 shadow-md'
+                                    : 'bg-white/50 border-gray-200'
+                                    }`}
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <Badge
+                                      variant={isCurrentMode ? 'default' : 'outline'}
+                                      className="text-xs"
+                                    >
+                                      {mode}
+                                    </Badge>
+                                    {isCurrentMode && (
+                                      <Check className="h-4 w-4 text-green-600" />
+                                    )}
+                                  </div>
+
+                                  {modePrice ? (
+                                    <>
+                                      <div className="text-lg font-bold text-gray-900">
+                                        UGX {modePrice.total.toLocaleString()}
+                                      </div>
+                                      <div className="mt-2 space-y-1 text-xs text-gray-600">
+                                        {modePrice.breakdown.combo_base > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>Base:</span>
+                                            <span>{modePrice.breakdown.combo_base.toLocaleString()}</span>
+                                          </div>
+                                        )}
+                                        {modePrice.breakdown.dish_base > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>Dishes:</span>
+                                            <span>{modePrice.breakdown.dish_base.toLocaleString()}</span>
+                                          </div>
+                                        )}
+                                        {modePrice.breakdown.dish_surcharges > 0 && (
+                                          <div className="flex justify-between">
+                                            <span>Extras:</span>
+                                            <span>{modePrice.breakdown.dish_surcharges.toLocaleString()}</span>
+                                          </div>
+                                        )}
+                                      </div>
+                                    </>
+                                  ) : (
+                                    <div className="text-sm text-gray-500">Calculating...</div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          <div className="pt-2 border-t text-xs text-gray-600">
+                            <p className="font-medium mb-1">Quick Guide:</p>
+                            <ul className="space-y-0.5 pl-4">
+                              <li>• <strong>FIXED:</strong> Best for consistent pricing</li>
+                              <li>• <strong>DYNAMIC:</strong> Reflects actual dish costs</li>
+                              <li>• <strong>HYBRID:</strong> Balance of both approaches</li>
+                            </ul>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CollapsibleContent>
+                </div>
+              </Collapsible>
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t bg-gray-50">
@@ -816,104 +984,73 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
             <Button
               variant="outline"
               onClick={onCancel}
+              disabled={isSaving}
             >
               Cancel
             </Button>
             <Button
               onClick={handleSubmit}
+              disabled={isSaving}
               className="flex items-center gap-2"
             >
-              <Check className="h-4 w-4" />
-              {isEditing ? 'Update Combo' : 'Create Combo'}
+              {isSaving ? (
+                <>
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <Check className="h-4 w-4" />
+                  {isEditing ? 'Update Combo' : 'Create Combo'}
+                </>
+              )}
             </Button>
           </div>
         </div>
       </div>
 
       {/* Dish Selector Modal */}
-      {showDishSelector && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-[60]">
-          <div className="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[80vh] overflow-hidden">
-            <div className="p-4 border-b">
-              <div className="flex justify-between items-center">
-                <h3 className="text-lg font-semibold text-gray-800">
-                  Select Dishes
-                  {formData.groups?.find(g => g.id === showDishSelector)?.suggested_categories && 
-                   formData.groups.find(g => g.id === showDishSelector)!.suggested_categories!.length > 0 && (
-                    <span className="text-sm font-normal text-gray-500 ml-2">
-                      (Filtered by suggested categories)
-                    </span>
-                  )}
-                </h3>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => {
-                    setShowDishSelector(null);
-                    setSelectedDishes([]);
-                  }}
-                >
-                  <X className="h-5 w-5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="p-4 overflow-y-auto max-h-[calc(80vh-180px)]">
-              <DishSelector
-                dishes={getFilteredDishesForGroup(showDishSelector)}
-                selectedDishes={selectedDishes}
-                onDishToggle={handleDishToggle}
-              />
-            </div>
-
-            <div className="p-4 border-t bg-gray-50">
-              <div className="flex justify-between items-center">
-                <p className="text-sm text-gray-600">
-                  {selectedDishes.length} dish{selectedDishes.length !== 1 ? 'es' : ''} selected
-                </p>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setShowDishSelector(null);
-                      setSelectedDishes([]);
-                    }}
-                  >
-                    Cancel
-                  </Button>
-                  <Button
-                    onClick={() => handleAddDishesToGroup(showDishSelector)}
-                    disabled={selectedDishes.length === 0}
-                  >
-                    Add {selectedDishes.length > 0 && `(${selectedDishes.length})`}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      <DishSelectorModal
+        isOpen={!!showDishSelector}
+        dishes={showDishSelector ? getFilteredDishesForGroup(showDishSelector) : []}
+        selectedDishes={selectedDishes}
+        groupName={showDishSelector ? formData.groups?.find(g => g.id === showDishSelector)?.name : undefined}
+        hasFilteredCategories={
+          showDishSelector
+            ? (formData.groups?.find(g => g.id === showDishSelector)?.suggested_categories?.length || 0) > 0
+            : false
+        }
+        onDishToggle={handleDishToggle}
+        onConfirm={() => showDishSelector && handleAddDishesToGroup(showDishSelector)}
+        onCancel={() => {
+          setShowDishSelector(null);
+          setSelectedDishes([]);
+        }}
+      />
     </div>
   );
 };
 
 const VendorMenu: React.FC = () => {
   const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
-  
+
   // Tab navigation
   const [activeSection, setActiveSection] = useState<'dishes' | 'combos'>('dishes');
-  
+
   // Category states
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
-  
+
   // Dish states
   const [dishDialogOpen, setDishDialogOpen] = useState(false);
   const [editingDish, setEditingDish] = useState<Dish | null>(null);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
   const [dishImages, setDishImages] = useState<string[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null!);
+
+  // Dish options state
+  const [dishOptions, setDishOptions] = useState<Array<{ name: string; extra_cost: number; required: boolean }>>([]);
 
   // Combo states
   const [comboDialogOpen, setComboDialogOpen] = useState(false);
@@ -922,6 +1059,10 @@ const VendorMenu: React.FC = () => {
   const [comboStatusFilter, setComboStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [comboPricingFilter, setComboPricingFilter] = useState<'all' | 'FIXED' | 'DYNAMIC' | 'HYBRID'>('all');
 
+  // Track loading states for combo operations
+  const [operatingComboId, setOperatingComboId] = useState<string | null>(null);
+  const [comboOperation, setComboOperation] = useState<'duplicate' | 'toggle' | 'delete' | null>(null);
+
   // Fetch categories and dishes
   const { data: categories, isLoading: categoriesLoading, error: categoriesError } = useMenuCategories(
     restaurantId || null
@@ -929,9 +1070,9 @@ const VendorMenu: React.FC = () => {
   const { data: dishes, isLoading: dishesLoading, error: dishesError } = useDishes(
     restaurantId ? { restaurant_id: restaurantId } : undefined
   );
-  
+
   // Fetch combos
-  const { data: combos, isLoading: combosLoading } = useRestaurantCombos(restaurantId || '');
+  const { data: combos } = useRestaurantCombos(restaurantId || '');
 
   // Helper: group dishes by category
   const dishesByCategory = (dishes || []).reduce((acc, dish) => {
@@ -947,7 +1088,7 @@ const VendorMenu: React.FC = () => {
   const filteredDishes = selectedCategoryId
     ? dishesByCategory[selectedCategoryId] || []
     : dishes || [];
-    
+
   // Filter combos
   const filteredCombos = (combos || []).filter(combo => {
     const matchesSearch = combo.name.toLowerCase().includes(comboSearch.toLowerCase()) ||
@@ -976,47 +1117,20 @@ const VendorMenu: React.FC = () => {
   const updateDishMutation = useUpdateDish();
   const deleteDishMutation = useDeleteDish();
   const createNodeMutation = useCreateNode();
-  
+
   // Combo mutations
   const createComboMutation = useCreateCombo();
   const updateComboMutation = useUpdateCombo();
   const deleteComboMutation = useDeleteCombo();
   const createComboGroupMutation = useCreateComboGroup();
+  const updateComboGroupMutation = useUpdateComboGroup();
+  const deleteComboGroupMutation = useDeleteComboGroup();
   const createComboGroupItemMutation = useCreateComboGroupItem();
-
-  // Category form
-  const categoryForm = useForm<CategoryFormData>({
-    defaultValues: {
-      name: '',
-      description: '',
-      display_order: 0,
-      color_code: '#3b82f6', // Default blue color
-    },
-  });
-
-  // Dish form
-  const dishForm = useForm<DishFormData>({
-    defaultValues: {
-      name: '',
-      description: '',
-      category_id: '',
-      price: 0,
-      unit: '',
-      available: true,
-      addToKitchen: false,
-      images: [],
-    },
-  });
+  const deleteComboGroupItemMutation = useDeleteComboGroupItem();
 
   // Open category dialog for editing
   const handleEditCategory = (category: MenuCategory) => {
     setEditingCategory(category);
-    categoryForm.reset({
-      name: category.name,
-      description: category.description || '',
-      display_order: category.display_order,
-      color_code: category.color_code || '#3b82f6',
-    });
     setCategoryDialogOpen(true);
   };
 
@@ -1024,17 +1138,13 @@ const VendorMenu: React.FC = () => {
   const handleEditDish = (dish: Dish) => {
     setEditingDish(dish);
     const existingImages = dish.images || [];
+    const existingOptions = (dish.options || []).map(opt => ({
+      name: opt.name,
+      extra_cost: opt.extra_cost,
+      required: opt.required,
+    }));
     setDishImages(existingImages);
-    dishForm.reset({
-      name: dish.name,
-      description: dish.description || '',
-      category_id: dish.category_id || '',
-      price: dish.price,
-      unit: dish.unit || '',
-      available: dish.available,
-      addToKitchen: false,
-      images: existingImages,
-    });
+    setDishOptions(existingOptions);
     setDishDialogOpen(true);
   };
 
@@ -1064,7 +1174,6 @@ const VendorMenu: React.FC = () => {
       }
       setCategoryDialogOpen(false);
       setEditingCategory(null);
-      categoryForm.reset();
     } catch (error: any) {
       toast.error(error.message || 'Failed to save category');
     }
@@ -1089,30 +1198,12 @@ const VendorMenu: React.FC = () => {
       const newUrls = uploadedFiles.map((file) => file.url);
       const updatedImages = [...dishImages, ...newUrls];
       setDishImages(updatedImages);
-      dishForm.setValue('images', updatedImages);
       toast.success(`${uploadedFiles.length} image(s) uploaded successfully`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to upload images');
     } finally {
       setUploadingImages(false);
     }
-  };
-
-  // Remove image
-  const handleRemoveImage = (index: number) => {
-    const updatedImages = dishImages.filter((_, i) => i !== index);
-    setDishImages(updatedImages);
-    dishForm.setValue('images', updatedImages);
-  };
-
-  // Set hero image (move to first position)
-  const handleSetHeroImage = (index: number) => {
-    if (index === 0) return; // Already hero
-    const updatedImages = [...dishImages];
-    const [heroImage] = updatedImages.splice(index, 1);
-    updatedImages.unshift(heroImage);
-    setDishImages(updatedImages);
-    dishForm.setValue('images', updatedImages);
   };
 
   // Handle dish form submission
@@ -1129,7 +1220,7 @@ const VendorMenu: React.FC = () => {
         images: dishImages.length > 0 ? dishImages : undefined,
         restaurant_id: restaurantId,
       };
-      
+
       if (editingDish) {
         createdDish = await updateDishMutation.mutateAsync({
           dishId: editingDish.id,
@@ -1171,7 +1262,7 @@ const VendorMenu: React.FC = () => {
       setDishDialogOpen(false);
       setEditingDish(null);
       setDishImages([]);
-      dishForm.reset();
+      setDishOptions([]);
     } catch (error: any) {
       toast.error(error.message || 'Failed to save dish');
     }
@@ -1222,6 +1313,8 @@ const VendorMenu: React.FC = () => {
       return;
     }
 
+    setOperatingComboId(combo.id);
+    setComboOperation('duplicate');
     try {
       await createComboMutation.mutateAsync({
         restaurant_id: restaurantId,
@@ -1234,6 +1327,9 @@ const VendorMenu: React.FC = () => {
       toast.success('Combo duplicated successfully!');
     } catch (error: any) {
       toast.error(error.message || 'Failed to duplicate combo');
+    } finally {
+      setOperatingComboId(null);
+      setComboOperation(null);
     }
   };
 
@@ -1241,6 +1337,8 @@ const VendorMenu: React.FC = () => {
     const combo = combos?.find(c => c.id === comboId);
     if (!combo) return;
 
+    setOperatingComboId(comboId);
+    setComboOperation('toggle');
     try {
       await updateComboMutation.mutateAsync({
         comboId,
@@ -1251,6 +1349,9 @@ const VendorMenu: React.FC = () => {
       toast.success(`Combo ${!combo.available ? 'activated' : 'deactivated'} successfully`);
     } catch (error: any) {
       toast.error(error.message || 'Failed to toggle combo status');
+    } finally {
+      setOperatingComboId(null);
+      setComboOperation(null);
     }
   };
 
@@ -1259,11 +1360,16 @@ const VendorMenu: React.FC = () => {
       return;
     }
 
+    setOperatingComboId(comboId);
+    setComboOperation('delete');
     try {
       await deleteComboMutation.mutateAsync(comboId);
       toast.success('Combo deleted successfully');
     } catch (error: any) {
       toast.error(error.message || 'Failed to delete combo');
+    } finally {
+      setOperatingComboId(null);
+      setComboOperation(null);
     }
   };
 
@@ -1288,7 +1394,89 @@ const VendorMenu: React.FC = () => {
             available: combo.available,
           },
         });
-        toast.success('Combo updated successfully');
+
+        // Step 2: Update groups and items for existing combo
+        if (combo.groups && combo.groups.length > 0) {
+          // Get original group IDs to detect deletions
+          const originalGroupIds = editingCombo.groups?.map(g => g.id) || [];
+          const updatedGroupIds = combo.groups.map(g => g.id).filter(id => !id.startsWith('temp-'));
+          const deletedGroupIds = originalGroupIds.filter(id => !updatedGroupIds.includes(id));
+
+          // Delete removed groups
+          for (const groupId of deletedGroupIds) {
+            try {
+              await deleteComboGroupMutation.mutateAsync(groupId);
+            } catch (error: any) {
+              console.error('Error deleting group:', error);
+              toast.error(`Failed to delete group: ${error.message}`);
+            }
+          }
+
+          // Process each group
+          for (const group of combo.groups) {
+            try {
+              const categoryHints = group.suggested_categories?.map(cat => cat.id) || [];
+              let processedGroup;
+
+              if (group.id.startsWith('temp-')) {
+                // Create new group
+                processedGroup = await createComboGroupMutation.mutateAsync({
+                  combo_id: savedCombo.id,
+                  name: group.name,
+                  allowed_min: group.allowed_min,
+                  allowed_max: group.allowed_max,
+                  category_hints: categoryHints.length > 0 ? categoryHints : undefined,
+                });
+              } else {
+                // Update existing group
+                processedGroup = await updateComboGroupMutation.mutateAsync({
+                  groupId: group.id,
+                  data: {
+                    name: group.name,
+                    allowed_min: group.allowed_min,
+                    allowed_max: group.allowed_max,
+                    category_hints: categoryHints.length > 0 ? categoryHints : undefined,
+                  },
+                });
+              }
+
+              // Handle items for this group
+              if (group.items && group.items.length > 0) {
+                const originalGroup = editingCombo.groups?.find(g => g.id === group.id);
+                const originalItemIds = originalGroup?.items?.map(i => i.id) || [];
+                const updatedItemIds = group.items.map(i => i.id).filter(id => !id.startsWith('temp-'));
+                const deletedItemIds = originalItemIds.filter(id => !updatedItemIds.includes(id));
+
+                // Delete removed items
+                for (const itemId of deletedItemIds) {
+                  try {
+                    await deleteComboGroupItemMutation.mutateAsync(itemId);
+                  } catch (error: any) {
+                    console.error('Error deleting item:', error);
+                  }
+                }
+
+                // Create new items (only those with temp IDs)
+                for (const item of group.items) {
+                  if (item.id.startsWith('temp-')) {
+                    await createComboGroupItemMutation.mutateAsync({
+                      combo_group_id: processedGroup.id,
+                      dish_id: item.dish_id,
+                      extra_price: item.extra_price,
+                    });
+                  }
+                  // Note: Backend doesn't support updating individual items' extra_price
+                  // If needed, delete and recreate the item
+                }
+              }
+            } catch (groupError: any) {
+              console.error('Error processing group:', groupError);
+              toast.error(`Failed to process group "${group.name}": ${groupError.message}`);
+            }
+          }
+        }
+
+        toast.success('Combo updated successfully with all changes!');
       } else {
         savedCombo = await createComboMutation.mutateAsync({
           restaurant_id: restaurantId,
@@ -1298,14 +1486,14 @@ const VendorMenu: React.FC = () => {
           base_price: combo.base_price,
           available: combo.available,
         });
-        
+
         // Step 2: Create groups and items for new combo
         if (combo.groups && combo.groups.length > 0) {
           for (const group of combo.groups) {
             try {
               // Create the group
               const categoryHints = group.suggested_categories?.map(cat => cat.id) || [];
-              
+
               const createdGroup = await createComboGroupMutation.mutateAsync({
                 combo_id: savedCombo.id,
                 name: group.name,
@@ -1334,8 +1522,11 @@ const VendorMenu: React.FC = () => {
         toast.success('Combo created successfully with all groups and items!');
       }
 
-      setComboDialogOpen(false);
-      setEditingCombo(null);
+      // Close dialog after a brief delay to allow query invalidation
+      setTimeout(() => {
+        setComboDialogOpen(false);
+        setEditingCombo(null);
+      }, 300);
     } catch (error: any) {
       console.error('Error saving combo:', error);
       toast.error(error.message || 'Failed to save combo');
@@ -1383,7 +1574,7 @@ const VendorMenu: React.FC = () => {
             <p className="text-muted-foreground text-center mb-4">
               {categoriesError ? 'Failed to load categories' : 'Failed to load dishes'}
             </p>
-            <Button 
+            <Button
               onClick={() => window.location.reload()}
               variant="outline"
             >
@@ -1398,447 +1589,11 @@ const VendorMenu: React.FC = () => {
   return (
     <div className="container mx-auto py-6 px-4 space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Menu Management</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your menu categories and dishes
+        <div className="flex items-baseline gap-2">
+          <h1 className="text-3xl font-bold">The Menu:</h1>
+          <p className="text-muted-foreground text-lg">
+            Create Dishes, Custom Combos, and Categorize them from here
           </p>
-        </div>
-        <div className="flex gap-2">
-          <Dialog
-            open={categoryDialogOpen}
-            onOpenChange={(open) => {
-              setCategoryDialogOpen(open);
-              if (!open) {
-                setEditingCategory(null);
-                categoryForm.reset();
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button variant="outline">
-                <Plus className="h-4 w-4 mr-2" />
-                Add Category
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>
-                  {editingCategory ? 'Edit Category' : 'Create Category'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingCategory
-                    ? 'Update the category details below.'
-                    : 'Add a new category to organize your menu.'}
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...categoryForm}>
-                <form
-                  onSubmit={categoryForm.handleSubmit(onCategorySubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={categoryForm.control}
-                    name="name"
-                    rules={{ required: 'Name is required' }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Appetizers" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={categoryForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Category description (optional)"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={categoryForm.control}
-                    name="display_order"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Display Order</FormLabel>
-                        <FormControl>
-                          <Input
-                            type="number"
-                            {...field}
-                            onChange={(e) =>
-                              field.onChange(parseInt(e.target.value) || 0)
-                            }
-                          />
-                        </FormControl>
-                        <FormDescription>
-                          Lower numbers appear first
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={categoryForm.control}
-                    name="color_code"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Color</FormLabel>
-                        <FormControl>
-                          <div className="flex items-center gap-3">
-                            <Input
-                              type="color"
-                              {...field}
-                              className="h-10 w-20 cursor-pointer"
-                            />
-                            <Input
-                              type="text"
-                              {...field}
-                              placeholder="#3b82f6"
-                              className="flex-1"
-                            />
-                          </div>
-                        </FormControl>
-                        <FormDescription>
-                          Choose a color to make this category visually distinct
-                        </FormDescription>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setCategoryDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createCategoryMutation.isPending || updateCategoryMutation.isPending}>
-                      {editingCategory ? 'Update' : 'Create'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
-
-          <Dialog
-            open={dishDialogOpen}
-            onOpenChange={(open) => {
-              setDishDialogOpen(open);
-              if (!open) {
-                setEditingDish(null);
-                setDishImages([]);
-                dishForm.reset();
-              }
-            }}
-          >
-            <DialogTrigger asChild>
-              <Button
-                onClick={() => {
-                  setDishImages([]);
-                  dishForm.reset({
-                    name: '',
-                    description: '',
-                    category_id: '',
-                    price: 0,
-                    unit: '',
-                    available: true,
-                    addToKitchen: false,
-                    images: [],
-                  });
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Add Dish
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>
-                  {editingDish ? 'Edit Dish' : 'Create Dish'}
-                </DialogTitle>
-                <DialogDescription>
-                  {editingDish
-                    ? 'Update the dish details below.'
-                    : 'Add a new dish to your menu.'}
-                </DialogDescription>
-              </DialogHeader>
-              <Form {...dishForm}>
-                <form
-                  onSubmit={dishForm.handleSubmit(onDishSubmit)}
-                  className="space-y-4"
-                >
-                  <FormField
-                    control={dishForm.control}
-                    name="name"
-                    rules={{ required: 'Name is required' }}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Name</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., Margherita Pizza" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={dishForm.control}
-                    name="description"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Description</FormLabel>
-                        <FormControl>
-                          <Textarea
-                            {...field}
-                            placeholder="Dish description (optional)"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="grid grid-cols-2 gap-4">
-                    <FormField
-                      control={dishForm.control}
-                      name="category_id"
-                      rules={{ required: 'Category is required' }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Category</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select category" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {categories?.map((cat) => (
-                                <SelectItem key={cat.id} value={cat.id}>
-                                  {cat.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={dishForm.control}
-                      name="price"
-                      rules={{
-                        required: 'Price is required',
-                        min: { value: 0, message: 'Price must be positive' },
-                      }}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Price (UGX)</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              {...field}
-                              onChange={(e) =>
-                                field.onChange(parseInt(e.target.value) || 0)
-                              }
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                  <FormField
-                    control={dishForm.control}
-                    name="unit"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Unit</FormLabel>
-                        <FormControl>
-                          <Input {...field} placeholder="e.g., per plate" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={dishForm.control}
-                    name="available"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <div className="space-y-1 leading-none">
-                          <FormLabel>Available</FormLabel>
-                          <FormDescription>
-                            Make this dish available for ordering
-                          </FormDescription>
-                        </div>
-                      </FormItem>
-                    )}
-                  />
-                  {!editingDish && (
-                    <FormField
-                      control={dishForm.control}
-                      name="addToKitchen"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel>Add to Kitchen Graph</FormLabel>
-                            <FormDescription>
-                              Automatically add this dish as a node in the kitchen graph
-                            </FormDescription>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                  
-                  {/* Images Section */}
-                  <div className="space-y-2">
-                    <FormLabel>Images</FormLabel>
-                    <FormDescription>
-                      Upload up to 8 images. The first image will be used as the hero image.
-                    </FormDescription>
-                    
-                    {/* Image Upload Area */}
-                    <div
-                      className="border-2 border-dashed border-muted-foreground/25 rounded-lg p-6 text-center cursor-pointer hover:border-muted-foreground/50 transition-colors"
-                      onClick={() => fileInputRef.current?.click()}
-                      onDragOver={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.add('border-primary');
-                      }}
-                      onDragLeave={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove('border-primary');
-                      }}
-                      onDrop={(e) => {
-                        e.preventDefault();
-                        e.currentTarget.classList.remove('border-primary');
-                        handleImageUpload(e.dataTransfer.files);
-                      }}
-                    >
-                      <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-                      <p className="text-sm text-muted-foreground mb-1">
-                        Click to upload or drag and drop
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        PNG, JPG, WEBP up to 5MB each
-                      </p>
-                    </div>
-                    
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/jpeg,image/png,image/webp"
-                      multiple
-                      onChange={(e) => handleImageUpload(e.target.files)}
-                      className="hidden"
-                      disabled={uploadingImages || dishImages.length >= 8}
-                    />
-                    
-                    {/* Image Preview Grid */}
-                    {dishImages.length > 0 && (
-                      <div className="grid grid-cols-4 gap-2 mt-4">
-                        {dishImages.map((imageUrl, index) => (
-                          <div
-                            key={index}
-                            className="relative group aspect-square rounded-lg overflow-hidden border-2 border-border"
-                          >
-                            <img
-                              src={imageUrl}
-                              alt={`Dish image ${index + 1}`}
-                              className="w-full h-full object-cover"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                              {index === 0 && (
-                                <Badge variant="default" className="absolute top-1 left-1">
-                                  <Star className="h-3 w-3 mr-1" />
-                                  Hero
-                                </Badge>
-                              )}
-                              {index !== 0 && (
-                                <Button
-                                  type="button"
-                                  size="icon"
-                                  variant="secondary"
-                                  className="h-7 w-7"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleSetHeroImage(index);
-                                  }}
-                                  title="Set as hero image"
-                                >
-                                  <Star className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                type="button"
-                                size="icon"
-                                variant="destructive"
-                                className="h-7 w-7"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleRemoveImage(index);
-                                }}
-                                title="Remove image"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                    
-                    {uploadingImages && (
-                      <p className="text-sm text-muted-foreground">Uploading images...</p>
-                    )}
-                  </div>
-                  
-                  <DialogFooter>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setDishDialogOpen(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={createDishMutation.isPending || updateDishMutation.isPending}>
-                      {editingDish ? 'Update' : 'Create'}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </Form>
-            </DialogContent>
-          </Dialog>
         </div>
       </div>
 
@@ -1972,9 +1727,24 @@ const VendorMenu: React.FC = () => {
       {/* Categories Section */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ChefHat className="h-5 w-5" />
-            Categories
+          <CardTitle className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <ChefHat className="h-5 w-5" />
+              Categories
+            </div>
+            <CategoryFormDialog
+              open={categoryDialogOpen}
+              onOpenChange={(open) => {
+                setCategoryDialogOpen(open);
+                if (!open) {
+                  setEditingCategory(null);
+                }
+              }}
+              editingCategory={editingCategory}
+              onSubmit={onCategorySubmit}
+              isCreating={createCategoryMutation.isPending}
+              isUpdating={updateCategoryMutation.isPending}
+            />
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -1996,7 +1766,7 @@ const VendorMenu: React.FC = () => {
               {categories.map((category) => {
                 const categoryColor = category.color_code || '#3b82f6';
                 return (
-                  <Card 
+                  <Card
                     key={category.id}
                     className="relative overflow-hidden border-t-4"
                     style={{ borderTopColor: categoryColor }}
@@ -2022,8 +1792,13 @@ const VendorMenu: React.FC = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteCategory(category.id)}
+                            disabled={deleteCategoryMutation.isPending}
                           >
-                            <Trash2 className="h-4 w-4 text-destructive" />
+                            {deleteCategoryMutation.isPending ? (
+                              <div className="animate-spin h-4 w-4 border-2 border-red-400 border-t-transparent rounded-full" />
+                            ) : (
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            )}
                           </Button>
                         </div>
                       </div>
@@ -2034,9 +1809,9 @@ const VendorMenu: React.FC = () => {
                       )}
                     </CardHeader>
                     <CardContent>
-                      <Badge 
+                      <Badge
                         variant="secondary"
-                        style={{ 
+                        style={{
                           backgroundColor: `${categoryColor}15`,
                           borderColor: `${categoryColor}40`,
                           color: categoryColor
@@ -2068,191 +1843,221 @@ const VendorMenu: React.FC = () => {
 
         {/* Dishes Tab */}
         <TabsContent value="dishes" className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Utensils className="h-5 w-5" />
-            Dishes
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {categories && categories.length > 0 && (
-            <div className="mb-4 flex gap-2 flex-wrap">
-              <Button
-                variant={selectedCategoryId === null ? 'default' : 'outline'}
-                onClick={() => setSelectedCategoryId(null)}
-              >
-                All Dishes
-              </Button>
-              {categories.map((cat) => {
-                const catColor = cat.color_code || '#3b82f6';
-                return (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Utensils className="h-5 w-5" />
+                  Dishes
+                </div>
+                <DishFormDialog
+                  open={dishDialogOpen}
+                  onOpenChange={(open) => {
+                    setDishDialogOpen(open);
+                    if (!open) {
+                      setEditingDish(null);
+                      setDishImages([]);
+                      setDishOptions([]);
+                    }
+                  }}
+                  editingDish={editingDish}
+                  categories={categories || []}
+                  dishImages={dishImages}
+                  setDishImages={setDishImages}
+                  dishOptions={dishOptions}
+                  setDishOptions={setDishOptions}
+                  uploadingImages={uploadingImages}
+                  fileInputRef={fileInputRef}
+                  onImageUpload={handleImageUpload}
+                  onSubmit={onDishSubmit}
+                  isCreating={createDishMutation.isPending}
+                  isUpdating={updateDishMutation.isPending}
+                />
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {categories && categories.length > 0 && (
+                <div className="mb-4 flex gap-2 flex-wrap">
                   <Button
-                    key={cat.id}
-                    variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
-                    onClick={() => setSelectedCategoryId(cat.id)}
-                    style={
-                      selectedCategoryId === cat.id
-                        ? {
-                            backgroundColor: catColor,
-                            borderColor: catColor,
-                            color: 'white',
-                          }
-                        : {
-                            borderColor: catColor,
-                            color: catColor,
-                          }
-                    }
+                    variant={selectedCategoryId === null ? 'default' : 'outline'}
+                    onClick={() => setSelectedCategoryId(null)}
                   >
-                    {cat.name}
+                    All Dishes
                   </Button>
-                );
-              })}
-            </div>
-          )}
-
-          {dishesLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <Skeleton key={i} className="h-32 w-full" />
-              ))}
-            </div>
-          ) : !filteredDishes || filteredDishes.length === 0 ? (
-            <div className="text-center py-8">
-              <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">
-                {selectedCategoryId
-                  ? 'No dishes in this category yet.'
-                  : 'No dishes yet. Create your first dish to get started.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredDishes.map((dish: Dish) => {
-                // Handle images - could be array, string (JSON), or null
-                let imagesArray: string[] = [];
-                if (dish.images) {
-                  if (Array.isArray(dish.images)) {
-                    imagesArray = dish.images;
-                  } else if (typeof dish.images === 'string') {
-                    try {
-                      const parsed = JSON.parse(dish.images);
-                      imagesArray = Array.isArray(parsed) ? parsed : [];
-                    } catch {
-                      // If parsing fails, treat as single URL string
-                      imagesArray = [dish.images];
-                    }
-                  }
-                }
-                
-                const heroImage = imagesArray.length > 0 ? getImageUrl(imagesArray[0]) : null;
-                const additionalImagesCount = imagesArray.length > 1 ? imagesArray.length - 1 : 0;
-                
-                return (
-                  <Card key={dish.id} className="overflow-hidden relative h-64">
-                    {/* Background Image with Overlay */}
-                    {heroImage ? (
-                      <div 
-                        className="absolute inset-0 bg-cover bg-center"
-                        style={{
-                          backgroundImage: `url(${heroImage})`,
-                        }}
+                  {categories.map((cat) => {
+                    const catColor = cat.color_code || '#3b82f6';
+                    return (
+                      <Button
+                        key={cat.id}
+                        variant={selectedCategoryId === cat.id ? 'default' : 'outline'}
+                        onClick={() => setSelectedCategoryId(cat.id)}
+                        style={
+                          selectedCategoryId === cat.id
+                            ? {
+                              backgroundColor: catColor,
+                              borderColor: catColor,
+                              color: 'white',
+                            }
+                            : {
+                              borderColor: catColor,
+                              color: catColor,
+                            }
+                        }
                       >
-                        {/* Dark overlay for better text readability */}
-                        <div className="absolute inset-0 bg-black/50" />
-                      </div>
-                    ) : (
-                      <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
-                    )}
-                    
-                    {/* Content Overlay */}
-                    <div className="relative h-full flex flex-col p-4 text-white">
-                      {/* Header with actions */}
-                      <div className="flex items-start justify-between mb-2">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg text-white drop-shadow-lg">
-                            {dish.name}
-                          </CardTitle>
-                          {dish.category && (
-                            <Badge 
-                              variant="secondary" 
-                              className="mt-1 text-white border-white/30"
-                              style={{
-                                backgroundColor: dish.category.color_code 
-                                  ? `${dish.category.color_code}CC` 
-                                  : 'rgba(255, 255, 255, 0.2)',
-                                borderColor: dish.category.color_code 
-                                  ? `${dish.category.color_code}80` 
-                                  : 'rgba(255, 255, 255, 0.3)',
-                              }}
-                            >
-                              {dish.category.name}
-                            </Badge>
+                        {cat.name}
+                      </Button>
+                    );
+                  })}
+                </div>
+              )}
+
+              {dishesLoading ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[1, 2, 3, 4, 5, 6].map((i) => (
+                    <Skeleton key={i} className="h-32 w-full" />
+                  ))}
+                </div>
+              ) : !filteredDishes || filteredDishes.length === 0 ? (
+                <div className="text-center py-8">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-muted-foreground">
+                    {selectedCategoryId
+                      ? 'No dishes in this category yet.'
+                      : 'No dishes yet. Create your first dish to get started.'}
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredDishes.map((dish: Dish) => {
+                    // Handle images - could be array, string (JSON), or null
+                    let imagesArray: string[] = [];
+                    if (dish.images) {
+                      if (Array.isArray(dish.images)) {
+                        imagesArray = dish.images;
+                      } else if (typeof dish.images === 'string') {
+                        try {
+                          const parsed = JSON.parse(dish.images);
+                          imagesArray = Array.isArray(parsed) ? parsed : [];
+                        } catch {
+                          // If parsing fails, treat as single URL string
+                          imagesArray = [dish.images];
+                        }
+                      }
+                    }
+
+                    const heroImage = imagesArray.length > 0 ? getImageUrl(imagesArray[0]) : null;
+                    const additionalImagesCount = imagesArray.length > 1 ? imagesArray.length - 1 : 0;
+
+                    return (
+                      <Card key={dish.id} className="overflow-hidden relative h-64">
+                        {/* Background Image with Overlay */}
+                        {heroImage ? (
+                          <div
+                            className="absolute inset-0 bg-cover bg-center"
+                            style={{
+                              backgroundImage: `url(${heroImage})`,
+                            }}
+                          >
+                            {/* Dark overlay for better text readability */}
+                            <div className="absolute inset-0 bg-black/50" />
+                          </div>
+                        ) : (
+                          <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted/50" />
+                        )}
+
+                        {/* Content Overlay */}
+                        <div className="relative h-full flex flex-col p-4 text-white">
+                          {/* Header with actions */}
+                          <div className="flex items-start justify-between mb-2">
+                            <div className="flex-1">
+                              <CardTitle className="text-lg text-white drop-shadow-lg">
+                                {dish.name}
+                              </CardTitle>
+                              {dish.category && (
+                                <Badge
+                                  variant="secondary"
+                                  className="mt-1 text-white border-white/30"
+                                  style={{
+                                    backgroundColor: dish.category.color_code
+                                      ? `${dish.category.color_code}CC`
+                                      : 'rgba(255, 255, 255, 0.2)',
+                                    borderColor: dish.category.color_code
+                                      ? `${dish.category.color_code}80`
+                                      : 'rgba(255, 255, 255, 0.3)',
+                                  }}
+                                >
+                                  {dish.category.name}
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20 h-8 w-8"
+                                onClick={() => handleEditDish(dish)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-white hover:bg-white/20 h-8 w-8"
+                                onClick={() => handleDeleteDish(dish.id)}
+                                disabled={deleteDishMutation.isPending}
+                              >
+                                {deleteDishMutation.isPending ? (
+                                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                                ) : (
+                                  <Trash2 className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+
+                          {/* Description */}
+                          {dish.description && (
+                            <p className="text-sm text-white/90 mb-auto line-clamp-2 drop-shadow">
+                              {dish.description}
+                            </p>
                           )}
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-white hover:bg-white/20 h-8 w-8"
-                            onClick={() => handleEditDish(dish)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-white hover:bg-white/20 h-8 w-8"
-                            onClick={() => handleDeleteDish(dish.id)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
-                      
-                      {/* Description */}
-                      {dish.description && (
-                        <p className="text-sm text-white/90 mb-auto line-clamp-2 drop-shadow">
-                          {dish.description}
-                        </p>
-                      )}
-                      
-                      {/* Footer with price and availability */}
-                      <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/20">
-                        <span className="text-lg font-semibold text-white drop-shadow">
-                          {dish.price.toLocaleString()} UGX
-                          {dish.unit && (
-                            <span className="text-sm font-normal text-white/80">
-                              {' '}/ {dish.unit}
+
+                          {/* Footer with price and availability */}
+                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-white/20">
+                            <span className="text-lg font-semibold text-white drop-shadow">
+                              {dish.price.toLocaleString()} UGX
+                              {dish.unit && (
+                                <span className="text-sm font-normal text-white/80">
+                                  {' '}/ {dish.unit}
+                                </span>
+                              )}
                             </span>
-                          )}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          {additionalImagesCount > 0 && (
-                            <Badge
-                              variant="secondary"
-                              className="bg-white/20 text-white border-white/30"
-                            >
-                              <ImageIcon className="h-3 w-3 mr-1" />
-                              +{additionalImagesCount}
-                            </Badge>
-                          )}
-                          <Badge
-                            variant={dish.available ? 'default' : 'secondary'}
-                            className={dish.available ? 'bg-green-500/80 text-white' : 'bg-white/20 text-white border-white/30'}
-                          >
-                            {dish.available ? 'Available' : 'Unavailable'}
-                          </Badge>
+                            <div className="flex items-center gap-2">
+                              {additionalImagesCount > 0 && (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-white/20 text-white border-white/30"
+                                >
+                                  <ImageIcon className="h-3 w-3 mr-1" />
+                                  +{additionalImagesCount}
+                                </Badge>
+                              )}
+                              <Badge
+                                variant={dish.available ? 'default' : 'secondary'}
+                                className={dish.available ? 'bg-green-500/80 text-white' : 'bg-white/20 text-white border-white/30'}
+                              >
+                                {dish.available ? 'Available' : 'Unavailable'}
+                              </Badge>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </div>
-                  </Card>
-                );
-              })}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                      </Card>
+                    );
+                  })}
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </TabsContent>
 
         {/* Combos Tab */}
@@ -2352,11 +2157,13 @@ const VendorMenu: React.FC = () => {
                 <ComboCard
                   key={combo.id}
                   combo={combo}
-                  dishes={dishes || []}
                   onEdit={handleEditCombo}
                   onDuplicate={handleDuplicateCombo}
                   onToggleStatus={handleToggleComboStatus}
                   onDelete={handleDeleteCombo}
+                  isDuplicating={operatingComboId === combo.id && comboOperation === 'duplicate'}
+                  isToggling={operatingComboId === combo.id && comboOperation === 'toggle'}
+                  isDeleting={operatingComboId === combo.id && comboOperation === 'delete'}
                 />
               ))}
             </div>
@@ -2376,6 +2183,15 @@ const VendorMenu: React.FC = () => {
             setEditingCombo(null);
           }}
           isEditing={!!editingCombo}
+          isSaving={
+            createComboMutation.isPending ||
+            updateComboMutation.isPending ||
+            createComboGroupMutation.isPending ||
+            updateComboGroupMutation.isPending ||
+            deleteComboGroupMutation.isPending ||
+            createComboGroupItemMutation.isPending ||
+            deleteComboGroupItemMutation.isPending
+          }
         />
       )}
     </div>

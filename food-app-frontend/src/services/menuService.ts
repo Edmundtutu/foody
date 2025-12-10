@@ -165,6 +165,51 @@ export interface ComboFilters {
   pricing_mode?: 'FIXED' | 'DYNAMIC' | 'HYBRID';
 }
 
+// Combo price calculation interfaces
+export interface ComboPriceBreakdown {
+  combo_base: number;
+  dish_base: number;
+  dish_surcharges: number;
+  options_surcharges: number;
+}
+
+export interface ComboPriceLineItem {
+  group_id: string;
+  group_name: string;
+  dish_id: string;
+  dish_name: string;
+  dish_base_price: number;
+  combo_item_extra: number;
+  applied_extra: number;
+  option_ids: string[];
+  options: Array<{
+    id: string;
+    name: string;
+    extra_cost: number;
+  }>;
+  options_total: number;
+  line_total: number;
+}
+
+export interface ComboPriceCalculation {
+  combo_id: string;
+  pricing_mode: 'FIXED' | 'DYNAMIC' | 'HYBRID';
+  base_price: number;
+  total: number;
+  breakdown: ComboPriceBreakdown;
+  items: ComboPriceLineItem[];
+}
+
+export interface ComboPriceRequest {
+  groups: Array<{
+    group_id: string;
+    selected: Array<{
+      dish_id: string;
+      option_ids: string[];
+    }>;
+  }>;
+}
+
 const menuService = {
   /**
    * Get all menu categories for a restaurant (public)
@@ -597,6 +642,23 @@ const menuService = {
     if (response.data.status !== 'success') {
       throw new Error(response.data.message || 'Failed to delete combo group item');
     }
+  },
+
+  /**
+   * Calculate combo price based on selections (public)
+   */
+  async calculateComboPrice(
+    comboId: string,
+    selections: ComboPriceRequest
+  ): Promise<ComboPriceCalculation> {
+    const response = await api.post<ApiResponse<ComboPriceCalculation>>(
+      `/${apiVersion}/combos/${comboId}/calculate`,
+      selections
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to calculate combo price');
   },
 };
 
