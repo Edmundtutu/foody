@@ -12,11 +12,11 @@ const Restaurants: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen p-4">
-      <div className="max-w-7xl mx-auto space-y-6">        
+    <div className="min-h-screen lg:p-4">
+      <div className="max-w-7xl mx-auto lg:space-y-6">        
         <RestaurantMap
           onRestaurantSelect={handleRestaurantSelect}
-          className="h-[60vh] sm:h-[70vh] lg:h-[600px]"
+          className="h-screen lg:h-[600px]"
         />
       </div>
     </div>

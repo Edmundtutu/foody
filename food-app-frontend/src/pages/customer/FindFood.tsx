@@ -97,11 +97,10 @@ interface FilterCardProps {
 const FilterCard: React.FC<FilterCardProps> = ({ name, icon: Icon, color, isActive, onClick }) => (
   <button
     onClick={onClick}
-    className={`flex items-center flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition duration-200 shadow-sm ${
-      isActive
+    className={`flex items-center flex-shrink-0 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm font-medium transition duration-200 shadow-sm ${isActive
         ? `${color} text-white`
         : 'bg-card text-foreground hover:bg-accent border border-border'
-    }`}
+      }`}
   >
     <Icon className={`mr-1 sm:mr-2 h-3 w-3 sm:h-4 sm:w-4 ${isActive ? 'text-white' : ''}`} />
     <span className="truncate max-w-[80px] sm:max-w-none">{name}</span>
@@ -131,10 +130,10 @@ const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
         <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
       </div>
     ) : (
-      <div className="flex overflow-x-scroll pb-4 space-x-2 sm:space-x-4 px-2 sm:px-0 hide-scrollbar">
+      <div className="flex overflow-x-scroll pb-4 space-x-3 sm:space-x-4 px-2 sm:px-0 hide-scrollbar">
         {dishes.length > 0 ? (
           dishes.map((dish) => (
-            <div key={dish.id} className="min-w-[160px] sm:min-w-[200px]">
+            <div key={dish.id} className="w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px] flex-shrink-0">
               <DishCard dish={dish} />
             </div>
           ))
@@ -159,7 +158,7 @@ const FindFood: React.FC = () => {
   const { location: userLocation, error: geoError, requestLocation } = useGeolocation();
   const { getItemCount } = useMeal();
   const { setMobileHeader } = useNavbar();
-  
+
   // Fetch popular tags from backend
   const { data: popularTags = [], isLoading: loadingTags } = usePopularTags(10);
 
@@ -242,9 +241,9 @@ const FindFood: React.FC = () => {
   const { data: searchResults, isLoading: loadingSearch } = useDishes(
     searchTerm || activeFilter
       ? {
-          ...baseFilters,
-          name: searchTerm,
-        }
+        ...baseFilters,
+        name: searchTerm,
+      }
       : undefined
   );
 
@@ -277,23 +276,6 @@ const FindFood: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Desktop Header - Only visible on desktop (lg+) */}
-      <header className="hidden lg:block sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
-        <div className="px-4 lg:px-8 py-3 flex justify-between items-center">
-          <h1 className="text-2xl font-black text-primary">Find Food</h1>
-          <Link to="/my-meal" className="relative">
-            <Button variant="ghost" size="icon" className="h-10 w-10">
-              <Bowl className="h-5 w-5" />
-            </Button>
-            {mealItemCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0">
-                {mealItemCount > 99 ? '99+' : mealItemCount}
-              </Badge>
-            )}
-          </Link>
-        </div>
-      </header>
-
       {/* Floating Location Badge */}
       {userLocation && (
         <div className="px-3 sm:px-4 lg:px-8 mt-2">
@@ -365,7 +347,7 @@ const FindFood: React.FC = () => {
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
                 </div>
               ) : displayedDishes.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-4">
+                <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
                   {displayedDishes.map((dish) => (
                     <div key={`search-${dish.id}`} className="w-full">
                       <DishCard dish={dish} />
@@ -383,6 +365,12 @@ const FindFood: React.FC = () => {
           ) : (
             <>
               <HorizontalScrollSection
+                title="Recently Ordered"
+                dishes={recentlyOrdered || []}
+                icon={History}
+                isLoading={loadingRecent}
+              />
+              <HorizontalScrollSection
                 title="Top Picks for You"
                 dishes={topPicks || []}
                 icon={Star}
@@ -393,12 +381,6 @@ const FindFood: React.FC = () => {
                 dishes={popularDishes || []}
                 icon={Flame}
                 isLoading={loadingPopular}
-              />
-              <HorizontalScrollSection
-                title="Recently Ordered"
-                dishes={recentlyOrdered || []}
-                icon={History}
-                isLoading={loadingRecent}
               />
             </>
           )}
