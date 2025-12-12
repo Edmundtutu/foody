@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   Home, 
@@ -9,13 +8,11 @@ import {
   Store,
   Package,
   BarChart3,
-  MessageCircle,
-  HandPlatter
 } from 'lucide-react';
+import Bowl from '@/assets/icons/bowl.svg?react';
 import { useAuth } from '@/context/AuthContext';
 import { useMeal } from '@/context/MealContext';
 import { Badge } from '@/components/ui/badge';
-import ErrorBoundary from '@/components/ErrorBoundary';
 
 interface NavItem {
   name: string;
@@ -38,7 +35,7 @@ const MobileBottomNav: React.FC = () => {
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Find Food', href: '/find-food', icon: Menu },
-    { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: cartItemCount },
+    { name: 'My Meal', href: '/my-meal', icon: Bowl, badge: cartItemCount },
     { name: 'Restaurants', href: '/restaurants', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },
   ];

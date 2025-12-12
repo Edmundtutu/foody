@@ -18,6 +18,7 @@ import VendorOrders from '@/pages/vendor/Orders';
 import VendorAnalytics from '@/pages/vendor/Analytics';
 import VendorProfile from '@/pages/vendor/Profile';
 import VendorMenu from '@/pages/vendor/Menu';
+import VendorAccount from '@/pages/vendor/Account';
 
 // Customer Pages (placeholders - to be implemented)
 import Home from '@/pages/customer/Home.tsx';
@@ -29,10 +30,10 @@ import Profile from '@/pages/customer/Profile.tsx';
 import MyMeal from '@/pages/customer/MyMeal.tsx';
 import DishDetail from '@/pages/customer/DishDetail.tsx';
 import RestaurantDetail from '@/pages/customer/RestaurantDetail.tsx';
-import VendorAccount from '@/pages/vendor/Account';
 
 // Other
 import NotFound from '@/pages/NotFound';
+import ComboBuilder from '@/pages/customer/ComboBuilder';
 
 // Route Guards
 interface ProtectedRouteProps {
@@ -156,7 +157,11 @@ const AppRoutes: React.FC = () => {
                         <RestaurantDetail />
                     </ProtectedRoute>
                 } />
-
+                <Route path="/combos/:comboId/builder" element={
+                    <ProtectedRoute layout="main">
+                        <ComboBuilder />
+                    </ProtectedRoute>
+                } />
                 {/* Vendor Routes */}
                 <Route path="/vendor/dashboard" element={
                     <ProtectedRoute requiredRole={['restaurant']} layout="vendor">

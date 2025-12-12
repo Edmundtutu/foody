@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMeal } from '@/context/MealContext';
+import { useMeal, } from '@/context/MealContext';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -55,14 +55,19 @@ const MyMeal: React.FC = () => {
     const total = subtotal + deliveryFee;
 
     const getItemTotal = (item: MealItem) => {
-        const dishPrice = item.dish.price;
-        const optionsPrice = item.selectedOptions.reduce((sum, option) => sum + option.extra_cost, 0);
-        return (dishPrice + optionsPrice) * item.quantity;
+        if (item.type === 'dish') {
+            const dishPrice = item.dish.price;
+            const optionsPrice = item.selectedOptions.reduce((sum, option) => sum + option.extra_cost, 0);
+            return (dishPrice + optionsPrice) * item.quantity;
+        } else {
+            // Combo item - use pre-calculated total price
+            return item.total_price * item.quantity;
+        }
     };
 
     const handleRemoveOption = (mealItemId: string, optionIdToRemove: string) => {
         const mealItem = mealItems.find(item => item.id === mealItemId);
-        if (mealItem) {
+        if (mealItem && mealItem.type === 'dish') {
             const updatedOptions = mealItem.selectedOptions.filter(opt => opt.id !== optionIdToRemove);
             updateOptions(mealItemId, updatedOptions);
         }
@@ -95,22 +100,34 @@ const MyMeal: React.FC = () => {
                 const orderData: CreateOrderData = {
                     restaurant_id: restaurantId,
                     items: items.map(item => {
-                        const dishPrice = item.dish.price;
-                        const optionsPrice = item.selectedOptions.reduce((sum, opt) => sum + opt.extra_cost, 0);
-                        const unitPrice = dishPrice + optionsPrice;
-                        const totalPrice = unitPrice * item.quantity;
+                        if (item.type === 'dish') {
+                            const dishPrice = item.dish.price;
+                            const optionsPrice = item.selectedOptions.reduce((sum, opt) => sum + opt.extra_cost, 0);
+                            const unitPrice = dishPrice + optionsPrice;
+                            const totalPrice = unitPrice * item.quantity;
 
-                        return {
-                            dish_id: item.dish.id,
-                            quantity: item.quantity,
-                            unit_price: unitPrice,
-                            total_price: totalPrice,
-                            options: item.selectedOptions.map(opt => ({
-                                id: opt.id,
-                                name: opt.name,
-                                extra_cost: opt.extra_cost,
-                            })),
-                        };
+                            return {
+                                type: 'dish',
+                                dish_id: item.dish.id,
+                                quantity: item.quantity,
+                                unit_price: unitPrice,
+                                total_price: totalPrice,
+                                options: item.selectedOptions.map(opt => ({
+                                    id: opt.id,
+                                    name: opt.name,
+                                    extra_cost: opt.extra_cost,
+                                })),
+                            };
+                        } else {
+                            // Combo item - use combo_selection_id
+                            return {
+                                type: 'combo',
+                                combo_selection_id: item.combo_selection_id,
+                                quantity: item.quantity,
+                                unit_price: item.total_price,
+                                total_price: item.total_price * item.quantity,
+                            };
+                        }
                     }),
                     notes: notes.trim() || undefined,
                     delivery_address: deliveryType === 'delivery' ? deliveryAddress : undefined,

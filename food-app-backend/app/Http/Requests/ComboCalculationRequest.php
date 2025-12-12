@@ -27,7 +27,7 @@ class ComboCalculationRequest extends FormRequest
                     }
                 }),
             ],
-            'groups.*.selected' => ['required', 'array', 'min:1'],
+            'groups.*.selected' => ['present', 'array'],
             'groups.*.selected.*.dish_id' => ['required', 'string', 'exists:dishes,id'],
             'groups.*.selected.*.option_ids' => ['sometimes', 'array'],
             'groups.*.selected.*.option_ids.*' => ['string', 'exists:dish_options,id'],

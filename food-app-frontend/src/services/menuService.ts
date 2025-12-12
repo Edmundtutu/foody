@@ -660,6 +660,23 @@ const menuService = {
     }
     throw new Error(response.data.message || 'Failed to calculate combo price');
   },
+
+  /**
+   * Create a combo selection (authenticated)
+   */
+  async createComboSelection(
+    comboId: string,
+    selections: ComboPriceRequest
+  ): Promise<{ id: string }> {
+    const response = await api.post<ApiResponse<{ id: string }>>(
+      `/${apiVersion}/combos/${comboId}/selections`,
+      selections
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to create combo selection');
+  },
 };
 
 export default menuService;

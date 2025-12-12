@@ -1,16 +1,44 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import type { Dish, DishOption } from '@/services/menuService';
+import type { Dish, DishOption, Combo } from '@/services/menuService';
 
-export interface MealItem {
+// Dish-based meal item
+export interface DishMealItem {
   id: string;
+  type: 'dish';
   dish: Dish;
   quantity: number;
   selectedOptions: DishOption[];
 }
 
+// Combo selection for meal
+export interface ComboSelection {
+  group_id: string;
+  group_name: string;
+  selected: Array<{
+    dish_id: string;
+    dish_name: string;
+    option_ids: string[];
+  }>;
+}
+
+// Combo-based meal item
+export interface ComboMealItem {
+  id: string;
+  type: 'combo';
+  combo: Combo;
+  combo_selection_id: string; // Backend combo selection ID
+  quantity: number;
+  selections: ComboSelection[];
+  total_price: number; // Calculated price from backend
+}
+
+// Union type for all meal items
+export type MealItem = DishMealItem | ComboMealItem;
+
 interface MealContextType {
   mealItems: MealItem[];
   addToMeal: (dish: Dish, quantity?: number, selectedOptions?: DishOption[]) => void;
+  addComboToMeal: (combo: Combo, comboSelectionId: string, selections: ComboSelection[], totalPrice: number, quantity?: number) => void;
   removeFromMeal: (mealItemId: string) => void;
   updateQuantity: (mealItemId: string, quantity: number) => void;
   updateOptions: (mealItemId: string, selectedOptions: DishOption[]) => void;
@@ -46,7 +74,6 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const normalized = parsed.map((item) => ({
           ...item,
           id: item.id || generateMealItemId(),
-          selectedOptions: item.selectedOptions || [],
         }));
         setMealItems(normalized);
       }
@@ -69,9 +96,31 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
       ...prev,
       {
         id: generateMealItemId(),
+        type: 'dish' as const,
         dish,
         quantity,
         selectedOptions,
+      },
+    ]);
+  }, []);
+
+  const addComboToMeal = useCallback((
+    combo: Combo,
+    comboSelectionId: string,
+    selections: ComboSelection[],
+    totalPrice: number,
+    quantity: number = 1
+  ) => {
+    setMealItems((prev) => [
+      ...prev,
+      {
+        id: generateMealItemId(),
+        type: 'combo' as const,
+        combo,
+        combo_selection_id: comboSelectionId,
+        quantity,
+        selections,
+        total_price: totalPrice,
       },
     ]);
   }, []);
@@ -107,17 +156,22 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const getTotalPrice = useCallback(() => {
     return mealItems.reduce((total, item) => {
-      const dishPrice = item.dish.price;
-      const optionsPrice = item.selectedOptions.reduce((sum, option) => sum + option.extra_cost, 0);
-      const itemTotal = (dishPrice + optionsPrice) * item.quantity;
-      return total + itemTotal;
+      if (item.type === 'dish') {
+        const dishPrice = item.dish.price;
+        const optionsPrice = item.selectedOptions.reduce((sum, option) => sum + option.extra_cost, 0);
+        const itemTotal = (dishPrice + optionsPrice) * item.quantity;
+        return total + itemTotal;
+      } else {
+        // Combo item - use pre-calculated total price
+        return total + (item.total_price * item.quantity);
+      }
     }, 0);
   }, [mealItems]);
 
   const getItemsByRestaurant = useCallback(() => {
     const grouped: Record<string, MealItem[]> = {};
     mealItems.forEach((item) => {
-      const restaurantId = item.dish.restaurant_id;
+      const restaurantId = item.type === 'dish' ? item.dish.restaurant_id : item.combo.restaurant_id;
       if (!grouped[restaurantId]) {
         grouped[restaurantId] = [];
       }
@@ -135,7 +189,7 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [mealItems]);
 
   const getItemsForDish = useCallback((dishId: string) => {
-    return mealItems.filter((item) => item.dish.id === dishId);
+    return mealItems.filter((item) => item.type === 'dish' && item.dish.id === dishId) as DishMealItem[];
   }, [mealItems]);
 
   const getDishQuantity = useCallback((dishId: string) => {
@@ -145,6 +199,7 @@ export const MealProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const value: MealContextType = {
     mealItems,
     addToMeal,
+    addComboToMeal,
     removeFromMeal,
     updateQuantity,
     updateOptions,

@@ -7,7 +7,6 @@ import {
   Home,
   Menu,
   MapPin,
-  ShoppingCart,
   User,
   Heart,
   Store,
@@ -16,9 +15,9 @@ import {
   Settings,
   Utensils,
   CookingPot,
-  HandPlatter
 } from 'lucide-react';
 import DeskBellIcon from '@/assets/icons/desk-bell.svg?react';
+import Bowl from '@/assets/icons/bowl.svg?react';
 import { useAuth } from '../context/AuthContext';
 import { useMeal } from '@/context/MealContext';
 
@@ -43,7 +42,7 @@ const DesktopSidebar: React.FC = () => {
     { name: 'Find Food', href: '/find-food', icon: Menu },
     { name: 'Restaurants', href: '/restaurants', icon: MapPin },
     { name: 'Favorites', href: '/favorites', icon: Heart },
-    { name: 'My Meal', href: '/my-meal', icon: HandPlatter, badge: mealBadge },
+    { name: 'My Meal', href: '/my-meal', icon: Bowl, badge: mealBadge },
     { name: 'Profile', href: '/profile', icon: User },
   ];
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, Star, Flame, History, ChefHat, Pizza, Leaf, Filter, Menu, HandPlatter } from 'lucide-react';
+import { Search, Star, Flame, History, ChefHat, Pizza, Leaf, Filter, Menu, } from 'lucide-react';
+import Bowl from '@/assets/icons/bowl.svg?react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ import {
   usePopularTags,
 } from '@/hooks/queries/useDishes';
 import { useMeal } from '@/context/MealContext';
+import { useNavbar } from '@/layouts/MainLayout';
 import type { Dish, DishFilters } from '@/services/menuService';
 
 // Icon mapping for common tags
@@ -156,6 +158,7 @@ const FindFood: React.FC = () => {
   const [deliveryAddress, setDeliveryAddress] = useState('Detecting location...');
   const { location: userLocation, error: geoError, requestLocation } = useGeolocation();
   const { getItemCount } = useMeal();
+  const { setMobileHeader } = useNavbar();
   
   // Fetch popular tags from backend
   const { data: popularTags = [], isLoading: loadingTags } = usePopularTags(10);
@@ -164,6 +167,36 @@ const FindFood: React.FC = () => {
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  // Get meal item count for badge
+  const mealItemCount = getItemCount();
+
+  // Nav-minimizer: Setup custom mobile header (desktop keeps default navbar)
+  useEffect(() => {
+    // Set custom mobile header
+    setMobileHeader(
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
+        <div className="px-3 sm:px-4 py-2 sm:py-3 flex justify-between items-center">
+          <h1 className="text-xl sm:text-2xl font-black text-primary">Find Food</h1>
+          <Link to="/my-meal" className="relative">
+            <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
+              <Bowl className="h-4 w-4 sm:h-5 sm:w-5" />
+            </Button>
+            {mealItemCount > 0 && (
+              <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs p-0">
+                {mealItemCount > 99 ? '99+' : mealItemCount}
+              </Badge>
+            )}
+          </Link>
+        </div>
+      </header>
+    );
+
+    // Cleanup on unmount
+    return () => {
+      setMobileHeader(null);
+    };
+  }, [setMobileHeader, mealItemCount]);
 
   // Reverse geocode location to address
   useEffect(() => {
@@ -242,20 +275,18 @@ const FindFood: React.FC = () => {
     return locationDishes || [];
   }, [searchTerm, activeFilter, searchResults, locationDishes]);
 
-  const mealItemCount = getItemCount();
-
   return (
     <div className="min-h-screen bg-background">
-      {/* Fixed Header - Mobile Optimized */}
-      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
-        <div className="px-3 sm:px-4 lg:px-8 py-2 sm:py-3 flex justify-between items-center">
-          <h1 className="text-xl sm:text-2xl font-black text-primary">Find Food</h1>
+      {/* Desktop Header - Only visible on desktop (lg+) */}
+      <header className="hidden lg:block sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
+        <div className="px-4 lg:px-8 py-3 flex justify-between items-center">
+          <h1 className="text-2xl font-black text-primary">Find Food</h1>
           <Link to="/my-meal" className="relative">
-            <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
-              <HandPlatter className="h-4 w-4 sm:h-5 sm:w-5" />
+            <Button variant="ghost" size="icon" className="h-10 w-10">
+              <Bowl className="h-5 w-5" />
             </Button>
             {mealItemCount > 0 && (
-              <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs p-0">
+              <Badge className="absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center text-xs p-0">
                 {mealItemCount > 99 ? '99+' : mealItemCount}
               </Badge>
             )}

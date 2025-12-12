@@ -3,14 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { X, Trash2, Minus, Plus, UtensilsCrossed } from 'lucide-react';
-import type { MealItem } from '@/context/MealContext';
+import type { DishMealItem } from '@/context/MealContext';
 
 interface MealItemCardProps {
-  item: MealItem;
+  item: DishMealItem;
   removeItem: (mealItemId: string) => void;
   updateQuantity: (mealItemId: string, quantity: number) => void;
   removeOption: (mealItemId: string, optionId: string) => void;
-  getItemTotal: (item: MealItem) => number;
+  getItemTotal: (item: DishMealItem) => number;
 }
 
 const MealItemCard: React.FC<MealItemCardProps> = ({
