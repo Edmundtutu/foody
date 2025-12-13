@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Badge } from '@/components/ui/badge';
 import { Link } from 'react-router-dom';
-import Bowl from '@/assets/icons/bowl.svg?react';
+import Dish from '@/assets/icons/dish.svg?react';
 import { getImageUrl } from '@/utils/pricingUtils';
 
 // === TYPES ===
@@ -558,7 +558,7 @@ const ComboBuilder: React.FC = () => {
                         </div>
                         <Link to="/my-meal" className="relative">
                             <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Bowl className="h-4 w-4" />
+                                <Dish className="h-4 w-4" />
                             </Button>
                             {mealItemCount > 0 && (
                                 <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-[10px] p-0">

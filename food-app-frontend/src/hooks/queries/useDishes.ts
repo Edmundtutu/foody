@@ -13,6 +13,7 @@ export function useDishes(filters?: DishFilters) {
   return useQuery<Dish[]>({
     queryKey: ['dishes', filters],
     queryFn: () => menuService.getDishes(filters),
+    enabled: filters !== undefined, // Only fetch when filters provided
     staleTime: 1000 * 60 * 5, // 5 minutes
   });
 }

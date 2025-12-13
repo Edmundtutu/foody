@@ -1,25 +1,26 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, Link } from 'react-router-dom';
-import { Search, Star, Flame, History, ChefHat, Pizza, Leaf, Filter, Menu, } from 'lucide-react';
-import Bowl from '@/assets/icons/bowl.svg?react';
+import { Search, Star, Flame, History, ChefHat, Pizza, Leaf, Filter, Menu, Compass } from 'lucide-react';
+import DishIcon from '@/assets/icons/dish.svg?react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import DishCard from '@/components/customer/DishCard';
+import ResourceCard from '@/components/customer/discovery/ResourceCard';
+import SeeMoreCard from '@/components/customer/discovery/SeeMoreCard';
 import LocationBadge from '@/components/customer/LocationBadge';
 import { useGeolocation } from '@/hooks/utils/useGeolocation';
 import { reverseGeocode } from '@/utils/location';
 import {
-  useDishesByLocation,
-  useTopPicks,
-  usePopularDishes,
-  useRecentlyOrdered,
-  useDishes,
-  usePopularTags,
-} from '@/hooks/queries/useDishes';
+  useTopPicksResources,
+  usePopularResources,
+  useRecentlyOrderedResources,
+  useDiscoveryResources,
+  useNearbyResources,
+} from '@/hooks/queries/useDiscovery';
+import { usePopularTags } from '@/hooks/queries/useDishes';
 import { useMeal } from '@/context/MealContext';
 import { useNavbar } from '@/layouts/MainLayout';
-import type { Dish, DishFilters } from '@/services/menuService';
+import type { DiscoveryResource, DiscoveryFilters } from '@/types/discovery';
 
 // Icon mapping for common tags
 const tagIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -109,16 +110,22 @@ const FilterCard: React.FC<FilterCardProps> = ({ name, icon: Icon, color, isActi
 
 interface HorizontalScrollSectionProps {
   title: string;
-  dishes: Dish[];
+  resources: DiscoveryResource[];
   icon: React.ComponentType<{ className?: string }>;
   isLoading?: boolean;
+  hasMore?: boolean;
+  onLoadMore?: () => void;
+  loadingMore?: boolean;
 }
 
 const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
   title,
-  dishes,
+  resources,
   icon: Icon,
   isLoading,
+  hasMore = false,
+  onLoadMore,
+  loadingMore = false,
 }) => (
   <section className="mt-6 sm:mt-8">
     <h2 className="text-lg sm:text-xl font-bold text-foreground mb-2 sm:mb-3 flex items-center px-2 sm:px-0">
@@ -131,12 +138,17 @@ const HorizontalScrollSection: React.FC<HorizontalScrollSectionProps> = ({
       </div>
     ) : (
       <div className="flex overflow-x-scroll pb-4 space-x-3 sm:space-x-4 px-2 sm:px-0 hide-scrollbar">
-        {dishes.length > 0 ? (
-          dishes.map((dish) => (
-            <div key={dish.id} className="w-[160px] sm:w-[180px] md:w-[200px] lg:w-[220px] flex-shrink-0">
-              <DishCard dish={dish} />
-            </div>
-          ))
+        {resources.length > 0 ? (
+          <>
+            {resources.map((resource) => (
+              <div key={`${resource.type}-${resource.id}`} className="w-48 flex-shrink-0">
+                <ResourceCard resource={resource} />
+              </div>
+            ))}
+            {hasMore && onLoadMore && (
+              <SeeMoreCard onClick={onLoadMore} isLoading={loadingMore} />
+            )}
+          </>
         ) : (
           <div className="px-2 sm:px-0 w-full">
             <p className="text-sm sm:text-base text-muted-foreground italic">
@@ -179,7 +191,7 @@ const FindFood: React.FC = () => {
           <h1 className="text-xl sm:text-2xl font-black text-primary">Find Food</h1>
           <Link to="/my-meal" className="relative">
             <Button variant="ghost" size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
-              <Bowl className="h-4 w-4 sm:h-5 sm:w-5" />
+              <DishIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             </Button>
             {mealItemCount > 0 && (
               <Badge className="absolute -top-1 -right-1 h-4 w-4 sm:h-5 sm:w-5 flex items-center justify-center text-[10px] sm:text-xs p-0">
@@ -223,56 +235,72 @@ const FindFood: React.FC = () => {
     }
   }, [searchTerm, searchQuery, setSearchParams]);
 
-  // Build filters for queries
-  const baseFilters: DishFilters = useMemo(() => {
-    const filters: DishFilters = {};
+  // Build base filters that ALWAYS include location when available
+  const baseFilters: DiscoveryFilters | undefined = useMemo(() => {
+    // Only create filters if location is available
+    if (!userLocation) return undefined;
+    
+    const filters: DiscoveryFilters = {
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+      radius: 20, // 20km radius
+    };
+    
+    // Add tag filter if active (but NOT 'All Dishes')
     if (activeFilter && activeFilter !== 'All Dishes') {
       filters.tag = activeFilter;
     }
-    if (userLocation) {
-      filters.lat = userLocation.lat;
-      filters.lng = userLocation.lng;
-      filters.radius = 20; // 20km radius
-    }
+    
     return filters;
   }, [activeFilter, userLocation]);
 
-  // Fetch dishes based on search/filter
-  const { data: searchResults, isLoading: loadingSearch } = useDishes(
-    searchTerm || activeFilter
+  // Fetch unified resources ONLY for search/filter results
+  const { resources: searchResults, isLoading: loadingSearch } = useDiscoveryResources(
+    (searchTerm || activeFilter) && baseFilters
       ? {
         ...baseFilters,
-        name: searchTerm,
+        name: searchTerm || undefined,
       }
       : undefined
   );
 
-  // Fetch location-based dishes
-  const { data: locationDishes } = useDishesByLocation(
-    userLocation?.lat || null,
-    userLocation?.lng || null,
-    20,
-    activeFilter && activeFilter !== 'All Dishes' ? { tag: activeFilter } : undefined
+  // Fetch special sections with unified resources (ONLY when showing default view)
+  const showSpecialSections = !searchTerm && !activeFilter;
+  
+  const { 
+    resources: topPicks, 
+    isLoading: loadingTopPicks,
+    hasMore: hasMoreTopPicks,
+    loadMore: loadMoreTopPicks,
+  } = useTopPicksResources(
+    showSpecialSections && baseFilters ? baseFilters : undefined
+  );
+  const { 
+    resources: popularResources, 
+    isLoading: loadingPopular,
+    hasMore: hasMorePopular,
+    loadMore: loadMorePopular,
+  } = usePopularResources(
+    showSpecialSections && baseFilters ? baseFilters : undefined
+  );
+  const { 
+    resources: recentlyOrdered, 
+    isLoading: loadingRecent,
+    hasMore: hasMoreRecent,
+    loadMore: loadMoreRecent,
+  } = useRecentlyOrderedResources(
+    showSpecialSections && baseFilters ? baseFilters : undefined
   );
 
-  // Fetch special sections
-  const { data: topPicks, isLoading: loadingTopPicks } = useTopPicks(
-    userLocation ? baseFilters : undefined
+  // Fetch all nearby resources for Discover section (with pagination)
+  const {
+    resources: nearbyResources,
+    isLoading: loadingNearby,
+    hasMore: hasMoreNearby,
+    loadMore: loadMoreNearby,
+  } = useNearbyResources(
+    showSpecialSections && baseFilters ? baseFilters : undefined
   );
-  const { data: popularDishes, isLoading: loadingPopular } = usePopularDishes(
-    userLocation ? baseFilters : undefined
-  );
-  const { data: recentlyOrdered, isLoading: loadingRecent } = useRecentlyOrdered(
-    userLocation ? baseFilters : undefined
-  );
-
-  // Determine which dishes to show
-  const displayedDishes = useMemo(() => {
-    if (searchTerm || activeFilter) {
-      return searchResults || [];
-    }
-    return locationDishes || [];
-  }, [searchTerm, activeFilter, searchResults, locationDishes]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -336,7 +364,7 @@ const FindFood: React.FC = () => {
 
         <div className="px-3 sm:px-4 lg:px-8">
           {/* Search/Filter Results */}
-          {activeFilter || searchTerm ? (
+          {searchTerm || activeFilter ? (
             <section className="mt-6 sm:mt-8">
               <h2 className="text-lg sm:text-2xl font-bold text-foreground mb-3 sm:mb-4 flex items-center">
                 <Star className="mr-2 h-5 w-5 sm:h-6 sm:w-6 text-primary fill-primary" />
@@ -346,18 +374,18 @@ const FindFood: React.FC = () => {
                 <div className="flex items-center justify-center py-8 sm:py-10">
                   <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2 border-primary"></div>
                 </div>
-              ) : displayedDishes.length > 0 ? (
+              ) : searchResults && searchResults.length > 0 ? (
                 <div className="grid grid-cols-1 xs:grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-4 md:gap-5">
-                  {displayedDishes.map((dish) => (
-                    <div key={`search-${dish.id}`} className="w-full">
-                      <DishCard dish={dish} />
+                  {searchResults.map((resource) => (
+                    <div key={`search-${resource.type}-${resource.id}`} className="w-full">
+                      <ResourceCard resource={resource} />
                     </div>
                   ))}
                 </div>
               ) : (
                 <div className="text-center py-8 sm:py-10 px-4">
                   <p className="text-base sm:text-lg text-muted-foreground italic">
-                    Sorry, we couldn't find any dishes matching your search or filter.
+                    Sorry, we couldn't find any items matching your search or filter.
                   </p>
                 </div>
               )}
@@ -366,21 +394,35 @@ const FindFood: React.FC = () => {
             <>
               <HorizontalScrollSection
                 title="Recently Ordered"
-                dishes={recentlyOrdered || []}
+                resources={recentlyOrdered || []}
                 icon={History}
                 isLoading={loadingRecent}
+                hasMore={hasMoreRecent}
+                onLoadMore={loadMoreRecent}
               />
               <HorizontalScrollSection
                 title="Top Picks for You"
-                dishes={topPicks || []}
+                resources={topPicks || []}
                 icon={Star}
                 isLoading={loadingTopPicks}
+                hasMore={hasMoreTopPicks}
+                onLoadMore={loadMoreTopPicks}
               />
               <HorizontalScrollSection
                 title="Popular Right Now"
-                dishes={popularDishes || []}
+                resources={popularResources || []}
                 icon={Flame}
                 isLoading={loadingPopular}
+                hasMore={hasMorePopular}
+                onLoadMore={loadMorePopular}
+              />
+              <HorizontalScrollSection
+                title="Discover Nearby"
+                resources={nearbyResources || []}
+                icon={Compass}
+                isLoading={loadingNearby}
+                hasMore={hasMoreNearby}
+                onLoadMore={loadMoreNearby}
               />
             </>
           )}

@@ -9,7 +9,7 @@ import {
   X,
   Bell,
 } from 'lucide-react';
-import Bowl from '@/assets/icons/bowl.svg?react';
+import Dish from '@/assets/icons/dish.svg?react';
 import type { User as UserType } from '@/types';
 import { useAuth } from '@/context/AuthContext';
 import { useMeal } from '@/context/MealContext';
@@ -64,7 +64,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
 
                   <Link to="/my-meal" className="relative">
                     <Button variant="ghost" size="icon">
-                      <Bowl className="h-5 w-5" />
+                      <Dish className="h-5 w-5" />
                     </Button>
                     {cartItemCount > 0 && (
                       <Badge className="absolute -top-1 -right-1 h-4 w-4 flex items-center justify-center text-xs p-0">
@@ -112,7 +112,7 @@ const Navbar: React.FC<NavbarProps> = ({ user }) => {
               {user.role === 'customer' && (
                 <Link to="/my-meal" className="relative">
                   <Button variant="ghost" size="icon" className="h-9 w-9">
-                    <Bowl className="h-4 w-4" />
+                    <Dish className="h-4 w-4" />
                   </Button>
                   {cartItemCount > 0 && (
                     <Badge className="absolute -top-1 -right-1 h-3 w-3 flex items-center justify-center text-xs p-0">

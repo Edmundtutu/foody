@@ -30,7 +30,7 @@ const DishCard: React.FC<DishCardProps> = ({ dish }) => {
 
   return (
     <div
-      className="flex-shrink-0 w-full bg-card rounded-xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02] cursor-pointer border border-border"
+      className="w-full bg-card rounded-xl shadow-lg hover:shadow-xl transition duration-300 transform hover:scale-[1.02] cursor-pointer border border-border"
       onClick={handleCardClick}
     >
       <div className="relative">
@@ -41,7 +41,7 @@ const DishCard: React.FC<DishCardProps> = ({ dish }) => {
               : `https://placehold.co/400x300/e0e0e0/555555?text=${dish.name.split(' ')[0]}`
           }
           alt={dish.name}
-          className="w-full h-36 sm:h-40 md:h-44 lg:h-48 object-cover rounded-t-xl"
+          className="w-full h-32 object-cover rounded-t-xl"
           onError={(e) => {
             (e.target as HTMLImageElement).src =
               'https://placehold.co/400x300/e0e0e0/555555?text=Food';
@@ -78,8 +78,8 @@ const DishCard: React.FC<DishCardProps> = ({ dish }) => {
         )}
         <div className="flex justify-between items-center text-xs sm:text-sm">
           {dish.rating && (
-            <span className="flex items-center text-accent font-medium">
-              <Star size={12} className="mr-1 fill-accent sm:w-3.5 sm:h-3.5" />
+            <span className="flex items-center text-secondary font-medium">
+              <Star size={12} className="mr-1 fill-yellow-400 sm:w-3.5 sm:h-3.5" />
               {dish.rating}
             </span>
           )}

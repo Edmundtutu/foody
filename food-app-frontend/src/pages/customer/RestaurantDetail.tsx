@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,23 +11,58 @@ import {
   Navigation,
   ArrowLeft,
   ChefHat,
+  Package,
 } from 'lucide-react';
 import { useRestaurant } from '@/hooks/queries/useRestaurants';
 import { useDishes } from '@/hooks/queries/useDishes';
-import DishCard from '@/components/customer/DishCard';
+import { useCombos } from '@/hooks/queries/useCombos';
+import DishCard from '@/components/customer/discovery/DishCard';
+import ComboCard from '@/components/customer/discovery/ComboCard';
 import { formatDistance } from '@/utils/location';
 import { useGeolocation } from '@/hooks/utils/useGeolocation';
+import { useNavbar } from '@/layouts/MainLayout';
 
 const RestaurantDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { location: userLocation } = useGeolocation();
+  const [activeTab, setActiveTab] = useState<'dishes' | 'combos'>('dishes');
+  const { setMobileHeader } = useNavbar();
 
   const { data: restaurant, isLoading: loadingRestaurant } = useRestaurant(id);
   const { data: dishes = [], isLoading: loadingDishes } = useDishes({
     restaurant_id: id,
     available: true,
   });
+  const { data: combos = [], isLoading: loadingCombos } = useCombos({
+    restaurant_id: id,
+    available: true,
+  });
+
+  // Nav-minimizer: Setup custom mobile header
+  useEffect(() => {
+    setMobileHeader(
+      <header className="sticky top-0 z-50 bg-card/95 backdrop-blur-sm border-b shadow-sm">
+        <div className="px-3 sm:px-4 py-2 sm:py-3 flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate(-1)}
+            className="h-9 w-9 sm:h-10 sm:w-10"
+          >
+            <ArrowLeft className="h-4 w-4 sm:h-5 sm:w-5" />
+          </Button>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground truncate">
+            {restaurant?.name || 'Restaurant'}
+          </h1>
+        </div>
+      </header>
+    );
+
+    return () => {
+      setMobileHeader(null);
+    };
+  }, [setMobileHeader, navigate, restaurant?.name]);
 
   if (loadingRestaurant) {
     return (
@@ -73,16 +108,6 @@ const RestaurantDetail: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-8">
-      {/* Back Button */}
-      <Button
-        variant="ghost"
-        onClick={() => navigate(-1)}
-        className="mb-4"
-      >
-        <ArrowLeft className="h-4 w-4 mr-2" />
-        Back
-      </Button>
-
       {/* Restaurant Header */}
       <Card>
         <CardContent className="p-6">
@@ -194,35 +219,102 @@ const RestaurantDetail: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Dishes Section */}
+      {/* Menu Section with Tabs */}
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-bold">Menu</h2>
-          <Badge variant="outline">
-            {dishes.length} {dishes.length === 1 ? 'dish' : 'dishes'}
-          </Badge>
         </div>
 
-        {loadingDishes ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-          </div>
-        ) : dishes.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <ChefHat className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">No dishes available</h3>
-              <p className="text-muted-foreground">
-                This restaurant hasn't added any dishes yet.
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {dishes.map((dish) => (
-              <DishCard key={dish.id} dish={dish} />
-            ))}
-          </div>
+        {/* Tabs */}
+        <div className="flex gap-2 border-b border-border">
+          <button
+            onClick={() => setActiveTab('dishes')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative ${
+              activeTab === 'dishes'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <ChefHat className="h-4 w-4" />
+            Dishes
+            <Badge variant={activeTab === 'dishes' ? 'default' : 'outline'}>
+              {dishes.length}
+            </Badge>
+            {activeTab === 'dishes' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+          <button
+            onClick={() => setActiveTab('combos')}
+            className={`flex items-center gap-2 px-4 py-3 font-medium transition-colors relative ${
+              activeTab === 'combos'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            Combos
+            <Badge variant={activeTab === 'combos' ? 'default' : 'outline'}>
+              {combos.length}
+            </Badge>
+            {activeTab === 'combos' && (
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            )}
+          </button>
+        </div>
+
+        {/* Dishes Tab Content */}
+        {activeTab === 'dishes' && (
+          <>
+            {loadingDishes ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : dishes.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <ChefHat className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No dishes available</h3>
+                  <p className="text-muted-foreground">
+                    This restaurant hasn't added any dishes yet.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {dishes.map((dish) => (
+                  <DishCard key={dish.id} dish={dish} />
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Combos Tab Content */}
+        {activeTab === 'combos' && (
+          <>
+            {loadingCombos ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+              </div>
+            ) : combos.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No combos available</h3>
+                  <p className="text-muted-foreground">
+                    This restaurant hasn't added any combos yet.
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                {combos.map((combo) => (
+                  <ComboCard key={combo.id} combo={combo} />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

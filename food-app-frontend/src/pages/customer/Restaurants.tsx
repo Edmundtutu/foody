@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import RestaurantMap from '@/components/customer/RestaurantMap';
+import RestaurantMap from '@/components/customer/map/RestaurantMap';
 import type { Restaurant } from '@/services/restaurantService';
 
 const Restaurants: React.FC = () => {

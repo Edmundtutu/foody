@@ -479,7 +479,7 @@ const RestaurantMap: React.FC<RestaurantMapProps> = ({
                     className="flex-1 h-12 shadow-lg font-bold"
                     onClick={handleViewRestaurant}
                   >
-                    View Dishes
+                    View Details
                   </Button>
                   {selectedRestaurant.latitude && selectedRestaurant.longitude && (
                     <Button 
@@ -723,7 +723,7 @@ const RestaurantMap: React.FC<RestaurantMapProps> = ({
                     className="flex-1"
                     onClick={handleViewRestaurant}
                   >
-                    View Dishes
+                    View Details
                   </Button>
                   {selectedRestaurant.latitude && selectedRestaurant.longitude && (
                     <Button 

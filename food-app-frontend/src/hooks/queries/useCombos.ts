@@ -8,7 +8,6 @@ import menuService, {
     type UpdateComboGroupData,
     type CreateComboGroupItemData,
     type ComboPriceRequest,
-    type ComboPriceCalculation,
 } from '@/services/menuService';
 
 /**
@@ -18,6 +17,7 @@ export function useCombos(filters?: ComboFilters) {
     return useQuery<Combo[]>({
         queryKey: ['combos', filters],
         queryFn: () => menuService.getCombos(filters),
+        enabled: filters !== undefined, // Only fetch when filters provided
         staleTime: 1000 * 60 * 5, // 5 minutes
     });
 }

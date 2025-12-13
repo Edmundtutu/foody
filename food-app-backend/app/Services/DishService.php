@@ -41,7 +41,11 @@ class DishService
         }
 
         if (isset($filters['available'])) {
-            $query->where('dishes.available', $filters['available']);
+            // Convert string 'true'/'false' to boolean
+            $available = filter_var($filters['available'], FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($available !== null) {
+                $query->where('dishes.available', $available);
+            }
         }
 
         // Enhanced search: search in dish name, restaurant name, and restaurant address

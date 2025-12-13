@@ -19,11 +19,17 @@ class Combo extends Model
         'pricing_mode',
         'base_price',
         'available',
+        'tags',
+        'images',
+        'order_count',
     ];
 
     protected $casts = [
         'base_price' => 'integer',
         'available' => 'boolean',
+        'tags' => 'array',
+        'images' => 'array',
+        'order_count' => 'integer',
     ];
 
     /**

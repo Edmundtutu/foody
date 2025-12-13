@@ -16,7 +16,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from 'lucide-react';
-import Bowl from '@/assets/icons/bowl.svg?react';
+import Dish from '@/assets/icons/dish.svg?react';
 import { useDish } from '@/hooks/queries/useDishes';
 import { useQuery } from '@tanstack/react-query';
 import menuService, { type DishOption } from '@/services/menuService';
@@ -719,7 +719,7 @@ const DishDetail: React.FC = () => {
               onClick={handleAddToMeal}
               disabled={!dish.available}
             >
-              <Bowl className="h-5 w-5 mr-2" />
+            <Dish className="h-5 w-5 mr-2" />
               Add to Meal · UGX {calculateTotalPrice().toLocaleString()}
             </Button>
           </div>
@@ -933,7 +933,7 @@ const DishDetail: React.FC = () => {
               onClick={handleAddToMeal}
               disabled={!dish.available}
             >
-              <Bowl className="h-5 w-5 mr-2" />
+              <Dish className="h-5 w-5 mr-2" />
               Add to Meal
             </Button>
             <Button

@@ -93,7 +93,8 @@ export interface DishFilters {
   lat?: number;
   lng?: number;
   radius?: number;
-  sort?: 'popular' | 'rating' | 'distance' | 'price';
+  sort?: 'name' | 'price_asc' | 'price_desc' | 'rating_desc' | 'distance';
+  type?: 'top_picks' | 'popular' | 'recently_ordered'; // Query type
 }
 
 // Combo-related interfaces
@@ -127,6 +128,13 @@ export interface Combo {
   pricing_mode: 'FIXED' | 'DYNAMIC' | 'HYBRID';
   base_price: number;
   available: boolean;
+  tags?: string[]; // Tag filtering
+  images?: string[]; // Display images
+  order_count?: number; // Popularity tracking
+  calculated_price?: number; // From price calculation
+  distance?: number; // Calculated distance (when location provided)
+  delivery_time?: number; // Estimated delivery time
+  restaurant?: Restaurant; // Populated restaurant data
   created_at: string;
   updated_at: string;
   groups?: ComboGroup[];
@@ -163,6 +171,13 @@ export interface ComboFilters {
   restaurant_id?: string;
   available?: boolean;
   pricing_mode?: 'FIXED' | 'DYNAMIC' | 'HYBRID';
+  name?: string; // Search filter
+  tag?: string; // Tag filter
+  lat?: number; // Location latitude
+  lng?: number; // Location longitude
+  radius?: number; // Location radius in km
+  sort?: 'price_asc' | 'price_desc' | 'popularity' | 'name';
+  type?: 'top_picks' | 'popular' | 'recently_ordered'; // Query type
 }
 
 // Combo price calculation interfaces

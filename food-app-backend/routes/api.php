@@ -37,7 +37,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{id}', [ReviewController::class, 'show']);
 
-    // Combos (public consumption)
+    // Combos (public consumption) - discovery endpoints
+    Route::get('/combos/tags/popular', [ComboController::class, 'getPopularTags']);
     Route::get('/combos', [ComboController::class, 'index']);
     Route::get('/combos/{combo}', [ComboController::class, 'show']);
     Route::post('/combos/{combo}/calculate', ComboCalculationController::class);

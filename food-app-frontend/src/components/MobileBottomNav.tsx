@@ -9,7 +9,7 @@ import {
   Package,
   BarChart3,
 } from 'lucide-react';
-import Bowl from '@/assets/icons/bowl.svg?react';
+import Dish from '@/assets/icons/dish.svg?react';
 import { useAuth } from '@/context/AuthContext';
 import { useMeal } from '@/context/MealContext';
 import { Badge } from '@/components/ui/badge';
@@ -35,7 +35,7 @@ const MobileBottomNav: React.FC = () => {
   const customerNavItems: NavItem[] = [
     { name: 'Home', href: '/', icon: Home },
     { name: 'Find Food', href: '/find-food', icon: Menu },
-    { name: 'My Meal', href: '/my-meal', icon: Bowl, badge: cartItemCount },
+    { name: 'My Meal', href: '/my-meal', icon: Dish, badge: cartItemCount },
     { name: 'Restaurants', href: '/restaurants', icon: MapPin },
     { name: 'Profile', href: '/profile', icon: User },
   ];
