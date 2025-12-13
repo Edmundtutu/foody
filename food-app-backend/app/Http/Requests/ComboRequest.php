@@ -38,6 +38,10 @@ abstract class ComboRequest extends FormRequest
             'pricing_mode' => [$presence, Rule::in(['FIXED', 'DYNAMIC', 'HYBRID'])],
             'base_price' => [$presence, 'integer', 'min:0'],
             'available' => ['sometimes', 'boolean'],
+            'tags' => ['sometimes', 'nullable', 'array', 'max:10'],
+            'tags.*' => ['string', 'max:50'],
+            'images' => ['sometimes', 'nullable', 'array', 'max:8'],
+            'images.*' => ['string', 'url', 'max:500'],
         ];
     }
 

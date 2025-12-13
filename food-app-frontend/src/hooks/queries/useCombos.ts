@@ -7,6 +7,7 @@ import menuService, {
     type CreateComboGroupData,
     type UpdateComboGroupData,
     type CreateComboGroupItemData,
+    type UpdateComboGroupItemData,
     type ComboPriceRequest,
 } from '@/services/menuService';
 
@@ -166,6 +167,23 @@ export function useCreateComboGroupItem() {
 
     return useMutation({
         mutationFn: (data: CreateComboGroupItemData) => menuService.createComboGroupItem(data),
+        onSuccess: () => {
+            // Invalidate combo queries to refresh items
+            queryClient.invalidateQueries({ queryKey: ['combos'] });
+            queryClient.invalidateQueries({ queryKey: ['combo'] });
+        },
+    });
+}
+
+/**
+ * Hook to update a combo group item
+ */
+export function useUpdateComboGroupItem() {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: ({ itemId, data }: { itemId: string; data: UpdateComboGroupItemData }) =>
+            menuService.updateComboGroupItem(itemId, data),
         onSuccess: () => {
             // Invalidate combo queries to refresh items
             queryClient.invalidateQueries({ queryKey: ['combos'] });

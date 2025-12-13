@@ -71,6 +71,11 @@ export interface CreateDishData {
   available?: boolean;
   images?: string[];
   tags?: string[];
+  options?: Array<{
+    name: string;
+    extra_cost: number;
+    required: boolean;
+  }>;
 }
 
 export interface UpdateDishData extends Partial<CreateDishData> {}
@@ -147,6 +152,8 @@ export interface CreateComboData {
   pricing_mode: 'fixed' | 'dynamic' | 'hybrid'; // lowercase for request
   base_price: number;
   available?: boolean;
+  tags?: string[];
+  images?: string[];
 }
 
 export interface UpdateComboData extends Partial<CreateComboData> {}
@@ -165,6 +172,10 @@ export interface CreateComboGroupItemData {
   combo_group_id: string;
   dish_id: string;
   extra_price: number;
+}
+
+export interface UpdateComboGroupItemData {
+  extra_price?: number;
 }
 
 export interface ComboFilters {
@@ -645,6 +656,20 @@ const menuService = {
       return response.data.data;
     }
     throw new Error(response.data.message || 'Failed to create combo group item');
+  },
+
+  /**
+   * Update a combo group item (authenticated)
+   */
+  async updateComboGroupItem(itemId: string, data: UpdateComboGroupItemData): Promise<ComboGroupItem> {
+    const response = await api.put<ApiResponse<ComboGroupItem>>(
+      `/${apiVersion}/combo-group-items/${itemId}`,
+      data
+    );
+    if (response.data.status === 'success' && response.data.data) {
+      return response.data.data;
+    }
+    throw new Error(response.data.message || 'Failed to update combo group item');
   },
 
   /**

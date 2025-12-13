@@ -32,6 +32,15 @@ class ComboGroupItem extends Model
     }
 
     /**
+     * Alias for group relationship (for direct access)
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<ComboGroup, ComboGroupItem>
+     */
+    public function comboGroup(): BelongsTo
+    {
+        return $this->group();
+    }
+
+    /**
      * Summary of dish
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<Dish, ComboGroupItem>
      */

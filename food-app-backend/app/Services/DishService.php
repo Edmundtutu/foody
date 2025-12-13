@@ -94,15 +94,60 @@ class DishService
 
     public function createDish(array $data)
     {
-        return Dish::create($data);
+        return DB::transaction(function () use ($data) {
+            // Extract options before creating dish
+            $options = $data['options'] ?? [];
+            unset($data['options']);
+
+            // Create dish
+            $dish = Dish::create($data);
+
+            // Create options if provided
+            if (!empty($options)) {
+                foreach ($options as $optionData) {
+                    $dish->options()->create([
+                        'name' => $optionData['name'],
+                        'extra_cost' => $optionData['extra_cost'],
+                        'required' => $optionData['required'] ?? false,
+                    ]);
+                }
+            }
+
+            return $dish->load('options');
+        });
     }
 
     public function updateDish(string $id, array $data)
     {
-        $dish = Dish::findOrFail($id);
-        $dish->update($data);
+        return DB::transaction(function () use ($id, $data) {
+            $dish = Dish::findOrFail($id);
 
-        return $dish->fresh();
+            // Extract options before updating dish
+            $options = $data['options'] ?? null;
+            unset($data['options']);
+
+            // Update dish
+            $dish->update($data);
+
+            // Update options if provided
+            if ($options !== null) {
+                // Delete all existing options
+                $dish->options()->delete();
+
+                // Create new options
+                if (!empty($options)) {
+                    foreach ($options as $optionData) {
+                        $dish->options()->create([
+                            'name' => $optionData['name'],
+                            'extra_cost' => $optionData['extra_cost'],
+                            'required' => $optionData['required'] ?? false,
+                        ]);
+                    }
+                }
+            }
+
+            return $dish->fresh(['options']);
+        });
     }
 
     public function deleteDish(string $id)

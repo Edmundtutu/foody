@@ -150,7 +150,7 @@ class ComboService
 
     protected function extractComboData(array $data, bool $isUpdate = false): array
     {
-        $fields = ['restaurant_id', 'name', 'description', 'pricing_mode', 'base_price', 'available'];
+        $fields = ['restaurant_id', 'name', 'description', 'pricing_mode', 'base_price', 'available', 'tags', 'images'];
         $payload = Arr::only($data, $fields);
 
         if (!$isUpdate) {

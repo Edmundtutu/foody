@@ -91,6 +91,8 @@ Route::prefix('v1')->group(function () {
         Route::put('/combo-groups/{group}', [ComboGroupController::class, 'updateDirect']);
         Route::delete('/combo-groups/{group}', [ComboGroupController::class, 'destroyDirect']);
         Route::post('/combo-groups/{group}/items', [ComboGroupItemController::class, 'storeDirect']);
+        Route::put('/combo-group-items/{item}', [ComboGroupItemController::class, 'updateDirect']);
+        Route::delete('/combo-group-items/{item}', [ComboGroupItemController::class, 'destroyDirect']);
 
         Route::prefix('combos/{combo}')->group(function () {
             Route::get('/groups', [ComboGroupController::class, 'index']);

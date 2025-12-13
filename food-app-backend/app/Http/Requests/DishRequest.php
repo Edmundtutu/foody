@@ -31,6 +31,10 @@ class DishRequest extends FormRequest
             'available' => 'nullable|boolean',
             'images' => 'nullable|array',
             'tags' => 'nullable|array',
+            'options' => 'nullable|array',
+            'options.*.name' => 'required|string|max:255',
+            'options.*.extra_cost' => 'required|integer|min:0',
+            'options.*.required' => 'required|boolean',
         ];
     }
 }

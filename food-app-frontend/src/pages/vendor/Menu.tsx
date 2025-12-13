@@ -70,6 +70,7 @@ import {
   useUpdateComboGroup,
   useDeleteComboGroup,
   useCreateComboGroupItem,
+  useUpdateComboGroupItem,
   useDeleteComboGroupItem,
   useCalculateComboPrice,
 } from '@/hooks/queries/useCombos';
@@ -112,10 +113,20 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
     base_price: 0,
     pricing_mode: 'DYNAMIC',
     available: true,
+    tags: [],
+    images: [],
+    order_count: 0,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     groups: [],
   });
+
+  // Images and tags state
+  const [comboImages, setComboImages] = useState<string[]>(combo?.images || []);
+  const [comboTags, setComboTags] = useState<string[]>(combo?.tags || []);
+  const [newTag, setNewTag] = useState('');
+  const [uploadingComboImages, setUploadingComboImages] = useState(false);
+  const comboFileInputRef = useRef<HTMLInputElement>(null!);
 
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [showDishSelector, setShowDishSelector] = useState<string | null>(null);
@@ -138,6 +149,71 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
       [field]: value,
       updated_at: new Date().toISOString()
     }));
+  };
+
+  // Sync formData with images and tags whenever they change
+  React.useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      images: comboImages,
+      tags: comboTags,
+    }));
+  }, [comboImages, comboTags]);
+
+  // Handle combo image upload
+  const handleComboImageUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    const fileArray = Array.from(files);
+    const remainingSlots = Math.max(0, 8 - comboImages.length);
+    const filesToUpload = fileArray.slice(0, remainingSlots);
+
+    if (filesToUpload.length === 0) {
+      toast.error('Maximum 8 images allowed');
+      return;
+    }
+
+    setUploadingComboImages(true);
+    try {
+      const uploadedFiles = await uploadService.uploadDishImages(filesToUpload);
+      const newUrls = uploadedFiles.map((file) => file.url);
+      const updatedImages = [...comboImages, ...newUrls];
+      setComboImages(updatedImages);
+      toast.success(`${uploadedFiles.length} image(s) uploaded successfully`);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to upload images');
+    } finally {
+      setUploadingComboImages(false);
+    }
+  };
+
+  // Handle remove combo image
+  const handleRemoveComboImage = (index: number) => {
+    setComboImages(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Handle add tag
+  const handleAddTag = () => {
+    const trimmedTag = newTag.trim().toLowerCase();
+    if (!trimmedTag) {
+      toast.error('Tag cannot be empty');
+      return;
+    }
+    if (comboTags.includes(trimmedTag)) {
+      toast.error('Tag already exists');
+      return;
+    }
+    if (comboTags.length >= 10) {
+      toast.error('Maximum 10 tags allowed');
+      return;
+    }
+    setComboTags(prev => [...prev, trimmedTag]);
+    setNewTag('');
+  };
+
+  // Handle remove tag
+  const handleRemoveTag = (tagToRemove: string) => {
+    setComboTags(prev => prev.filter(tag => tag !== tagToRemove));
   };
 
   const handleAddGroup = () => {
@@ -487,6 +563,125 @@ const ComboForm: React.FC<ComboFormProps> = ({ combo, dishes, categories, onSave
                 rows={2}
               />
             </div>
+
+            {/* Tags Section */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tags (Optional)
+              </label>
+              <div className="flex gap-2 mb-2">
+                <Input
+                  type="text"
+                  value={newTag}
+                  onChange={(e) => setNewTag(e.target.value)}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      handleAddTag();
+                    }
+                  }}
+                  placeholder="Add tag (e.g., spicy, vegetarian, popular)"
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  onClick={handleAddTag}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4" />
+                </Button>
+              </div>
+              {comboTags.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {comboTags.map((tag, index) => (
+                    <Badge key={index} variant="secondary" className="flex items-center gap-1">
+                      {tag}
+                      <button
+                        onClick={() => handleRemoveTag(tag)}
+                        className="ml-1 hover:text-destructive"
+                        type="button"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-1">
+                {comboTags.length}/10 tags added
+              </p>
+            </div>
+
+            {/* Images Section */}
+            <div className="mt-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Combo Images (Optional)
+              </label>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3">
+                  <input
+                    ref={comboFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    onChange={(e) => handleComboImageUpload(e.target.files)}
+                    className="hidden"
+                  />
+                  <Button
+                    type="button"
+                    onClick={() => comboFileInputRef.current?.click()}
+                    disabled={uploadingComboImages || comboImages.length >= 8}
+                    variant="outline"
+                    size="sm"
+                  >
+                    <ImageIcon className="h-4 w-4 mr-2" />
+                    {uploadingComboImages ? 'Uploading...' : 'Upload Images'}
+                  </Button>
+                  <span className="text-sm text-muted-foreground">
+                    {comboImages.length}/8 images uploaded
+                  </span>
+                </div>
+
+                {comboImages.length > 0 && (
+                  <div className="grid grid-cols-4 gap-3">
+                    {comboImages.map((image, index) => (
+                      <div key={index} className="relative group aspect-square">
+                        <img
+                          src={(getImageUrl(image) || image) as string}
+                          alt={`Combo image ${index + 1}`}
+                          className="w-full h-full object-cover rounded-lg border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveComboImage(index)}
+                          className="absolute top-1 right-1 bg-destructive text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Order Count Display (for editing mode) */}
+            {isEditing && combo?.order_count !== undefined && (
+              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-gray-700">
+                    Total Orders
+                  </span>
+                  <Badge variant="default" className="text-base">
+                    {combo.order_count}
+                  </Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  This combo has been ordered {combo.order_count} time{combo.order_count !== 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Groups & Items */}
@@ -1126,6 +1321,7 @@ const VendorMenu: React.FC = () => {
   const updateComboGroupMutation = useUpdateComboGroup();
   const deleteComboGroupMutation = useDeleteComboGroup();
   const createComboGroupItemMutation = useCreateComboGroupItem();
+  const updateComboGroupItemMutation = useUpdateComboGroupItem();
   const deleteComboGroupItemMutation = useDeleteComboGroupItem();
 
   // Open category dialog for editing
@@ -1218,6 +1414,7 @@ const VendorMenu: React.FC = () => {
       const submitData = {
         ...data,
         images: dishImages.length > 0 ? dishImages : undefined,
+        options: dishOptions.length > 0 ? dishOptions : undefined,
         restaurant_id: restaurantId,
       };
 
@@ -1392,6 +1589,8 @@ const VendorMenu: React.FC = () => {
             pricing_mode: combo.pricing_mode.toLowerCase() as 'fixed' | 'dynamic' | 'hybrid',
             base_price: combo.base_price,
             available: combo.available,
+            tags: combo.tags && combo.tags.length > 0 ? combo.tags : undefined,
+            images: combo.images && combo.images.length > 0 ? combo.images : undefined,
           },
         });
 
@@ -1441,32 +1640,55 @@ const VendorMenu: React.FC = () => {
               }
 
               // Handle items for this group
-              if (group.items && group.items.length > 0) {
-                const originalGroup = editingCombo.groups?.find(g => g.id === group.id);
-                const originalItemIds = originalGroup?.items?.map(i => i.id) || [];
-                const updatedItemIds = group.items.map(i => i.id).filter(id => !id.startsWith('temp-'));
-                const deletedItemIds = originalItemIds.filter(id => !updatedItemIds.includes(id));
+              const originalGroup = editingCombo.groups?.find(g => g.id === group.id);
+              const originalItems = originalGroup?.items || [];
+              const currentItems = group.items || [];
 
-                // Delete removed items
-                for (const itemId of deletedItemIds) {
+              // Build map for comparison
+              const originalItemMap = new Map(originalItems.map(i => [i.id, i]));
+
+              // Delete removed items (items that existed but are no longer present)
+              for (const originalItem of originalItems) {
+                const stillExists = currentItems.some(ci => 
+                  ci.id === originalItem.id || ci.dish_id === originalItem.dish_id
+                );
+                if (!stillExists) {
                   try {
-                    await deleteComboGroupItemMutation.mutateAsync(itemId);
+                    await deleteComboGroupItemMutation.mutateAsync(originalItem.id);
                   } catch (error: any) {
                     console.error('Error deleting item:', error);
                   }
                 }
+              }
 
-                // Create new items (only those with temp IDs)
-                for (const item of group.items) {
-                  if (item.id.startsWith('temp-')) {
+              // Process each current item
+              for (const item of currentItems) {
+                if (item.id.startsWith('temp-')) {
+                  // Create new item
+                  try {
                     await createComboGroupItemMutation.mutateAsync({
                       combo_group_id: processedGroup.id,
                       dish_id: item.dish_id,
                       extra_price: item.extra_price,
                     });
+                  } catch (error: any) {
+                    console.error('Error creating item:', error);
                   }
-                  // Note: Backend doesn't support updating individual items' extra_price
-                  // If needed, delete and recreate the item
+                } else {
+                  // Check if existing item's extra_price changed
+                  const originalItem = originalItemMap.get(item.id);
+                  if (originalItem && originalItem.extra_price !== item.extra_price) {
+                    try {
+                      await updateComboGroupItemMutation.mutateAsync({
+                        itemId: item.id,
+                        data: {
+                          extra_price: item.extra_price,
+                        },
+                      });
+                    } catch (error: any) {
+                      console.error('Error updating item:', error);
+                    }
+                  }
                 }
               }
             } catch (groupError: any) {
@@ -1485,6 +1707,8 @@ const VendorMenu: React.FC = () => {
           pricing_mode: combo.pricing_mode.toLowerCase() as 'fixed' | 'dynamic' | 'hybrid',
           base_price: combo.base_price,
           available: combo.available,
+          tags: combo.tags && combo.tags.length > 0 ? combo.tags : undefined,
+          images: combo.images && combo.images.length > 0 ? combo.images : undefined,
         });
 
         // Step 2: Create groups and items for new combo
@@ -2017,9 +2241,40 @@ const VendorMenu: React.FC = () => {
 
                           {/* Description */}
                           {dish.description && (
-                            <p className="text-sm text-white/90 mb-auto line-clamp-2 drop-shadow">
+                            <p className="text-sm text-white/90 mb-2 line-clamp-2 drop-shadow">
                               {dish.description}
                             </p>
+                          )}
+
+                          {/* Dish Options */}
+                          {dish.options && dish.options.length > 0 && (
+                            <div className="mb-auto">
+                              <p className="text-xs text-white/70 mb-1 drop-shadow">Options:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {dish.options.slice(0, 3).map((option, idx) => (
+                                  <Badge
+                                    key={idx}
+                                    variant="secondary"
+                                    className="bg-white/20 text-white border-white/30 text-xs"
+                                  >
+                                    {option.name}
+                                    {option.extra_cost > 0 && (
+                                      <span className="ml-1 text-white/80">
+                                        +{option.extra_cost}
+                                      </span>
+                                    )}
+                                  </Badge>
+                                ))}
+                                {dish.options.length > 3 && (
+                                  <Badge
+                                    variant="secondary"
+                                    className="bg-white/20 text-white border-white/30 text-xs"
+                                  >
+                                    +{dish.options.length - 3} more
+                                  </Badge>
+                                )}
+                              </div>
+                            </div>
                           )}
 
                           {/* Footer with price and availability */}
@@ -2190,6 +2445,7 @@ const VendorMenu: React.FC = () => {
             updateComboGroupMutation.isPending ||
             deleteComboGroupMutation.isPending ||
             createComboGroupItemMutation.isPending ||
+            updateComboGroupItemMutation.isPending ||
             deleteComboGroupItemMutation.isPending
           }
         />
