@@ -19,6 +19,11 @@ return new class extends Migration
             $table->text('content')->nullable();
             $table->timestamp('read_at')->nullable();
             $table->timestamp('created_at')->useCurrent();
+
+            $table->index('conversation_id');
+            $table->index('sender_id');
+            $table->index('created_at');
+            $table->index(['conversation_id', 'created_at']);
         });
     }
 

@@ -16,10 +16,16 @@ return new class extends Migration
             $table->foreignUlid('restaurant_id')->constrained()->cascadeOnDelete();
             $table->string('name');
             $table->text('description')->nullable();
+            $table->json('tags')->nullable();
+            $table->json('images')->nullable();
+            $table->unsignedInteger('order_count')->default(0);
             $table->enum('pricing_mode', ['FIXED', 'DYNAMIC', 'HYBRID'])->default('FIXED');
             $table->decimal('base_price', 10, 2)->default(0);
             $table->boolean('available')->default(true);
             $table->timestamps();
+            
+            $table->index('available');
+            $table->index('order_count');
         });
     }
 

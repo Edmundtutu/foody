@@ -24,6 +24,11 @@ return new class extends Migration
             $table->json('tags')->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index('restaurant_id');
+            $table->index('category_id');
+            $table->index('available');
+            $table->index(['restaurant_id', 'category_id']);
         });
     }
 

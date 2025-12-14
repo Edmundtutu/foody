@@ -14,15 +14,21 @@ return new class extends Migration
         Schema::create('inventory_nodes', function (Blueprint $table) {
             $table->ulid('id')->primary();
             $table->foreignUlid('restaurant_id')->constrained()->onDelete('cascade');
-            $table->enum('entity_type', ['ingredient', 'dish', 'station']);
+            $table->foreignUlid('category_id')->nullable()->constrained('menu_categories');
+            $table->enum('entity_type', ['dish', 'modification', 'category']);
             $table->char('entity_id', 26)->nullable();
             $table->string('display_name')->nullable();
             $table->integer('x')->default(0);
             $table->integer('y')->default(0);
+            $table->boolean('available')->default(true);
             $table->string('color_code', 10)->nullable();
             $table->json('metadata')->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index('restaurant_id');
+            $table->index('category_id');
+            $table->index('entity_type');
         });
     }
 

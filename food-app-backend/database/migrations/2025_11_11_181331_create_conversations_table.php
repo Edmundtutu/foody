@@ -19,6 +19,12 @@ return new class extends Migration
             $table->enum('status', ['active', 'closed', 'archived'])->default('active');
             $table->timestamp('last_message_at')->nullable();
             $table->timestamps();
+
+            $table->index('restaurant_id');
+            $table->index('customer_id');
+            $table->index('order_id');
+            $table->index('last_message_at');
+            $table->index(['restaurant_id', 'last_message_at']);
         });
     }
 

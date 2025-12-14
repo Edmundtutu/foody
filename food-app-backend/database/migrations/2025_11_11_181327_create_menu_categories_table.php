@@ -17,8 +17,12 @@ return new class extends Migration
             $table->string('name');
             $table->text('description')->nullable();
             $table->integer('display_order')->default(0);
+            $table->string('color_code', 10)->nullable();
             $table->timestamps();
             $table->softDeletes();
+
+            $table->index('restaurant_id');
+            $table->index('display_order');
         });
     }
 

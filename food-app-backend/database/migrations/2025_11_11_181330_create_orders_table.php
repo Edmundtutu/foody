@@ -20,6 +20,14 @@ return new class extends Migration
             $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
+            
+            // Indexes for performance
+            $table->index('restaurant_id');
+            $table->index('user_id');
+            $table->index('status');
+            $table->index('created_at');
+            $table->index(['restaurant_id', 'status']);
+            $table->index(['restaurant_id', 'created_at']);
         });
     }
 
