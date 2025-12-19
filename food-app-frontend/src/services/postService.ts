@@ -88,4 +88,13 @@ export const postService = {
         }
         return response.data.data;
     },
+
+    /**
+     * Deletes a post.
+     * @param postId The ID of the post to delete.
+     * @returns A promise that resolves when the post is deleted.
+     */
+    async deletePost(postId: string): Promise<void> {
+        await api.delete(`${apiVersion}/posts/${postId}`);
+    },
 };

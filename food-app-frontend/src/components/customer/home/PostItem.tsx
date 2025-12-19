@@ -6,6 +6,12 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious, type CarouselApi } from '@/components/ui/carousel';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
   Heart,
   MessageCircle,
   Share,
@@ -16,10 +22,12 @@ import {
   ChevronUp,
   ChevronDown,
   ExternalLink,
+  Trash2,
 } from 'lucide-react';
 import { postService } from '@/services/postService';
 import type { Post } from '@/types';
 import CommentSection from './CommentSection';
+import { useToast } from '@/hooks/use-toast';
 
 interface PostItemProps {
   post: Post;
@@ -35,6 +43,7 @@ const PostItem: React.FC<PostItemProps> = ({
   className = '' 
 }) => {
   const queryClient = useQueryClient();
+  const { toast } = useToast();
   const [showComments, setShowComments] = useState(isCommentExpanded);
   const [isImageExpanded, setIsImageExpanded] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -95,6 +104,43 @@ const PostItem: React.FC<PostItemProps> = ({
     },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: postService.deletePost,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['posts'] });
+    },
+    onError: (error: any) => {
+      console.error('Delete post failed:', error);
+      const status = error?.response?.status;
+      if (status === 403) {
+        toast({
+          variant: "destructive",
+          title: "Not Permitted",
+          description: "You are not permitted to delete this post",
+        });
+      } else if (status === 401) {
+        toast({
+          variant: "destructive",
+          title: "Authentication Required",
+          description: "You must be logged in to delete posts",
+        });
+      } else {
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to delete post. Please try again.",
+        });
+      }
+    },
+  });
+
+  const handleDeletePost = useCallback(() => {
+    if (window.confirm('Are you sure you want to delete this post? This action cannot be undone.')) {
+      deleteMutation.mutate(post.id);
+    }
+  }, [deleteMutation, post.id]);
+
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -146,9 +192,23 @@ const PostItem: React.FC<PostItemProps> = ({
               </div>
             </div>
           </div>
-          <Button variant="ghost" size="sm" className="h-8 w-8 flex-shrink-0">
-            <MoreHorizontal className="h-4 w-4" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem 
+                onClick={handleDeletePost}
+                disabled={deleteMutation.isPending}
+                className="text-destructive focus:text-destructive cursor-pointer"
+              >
+                <Trash2 className="h-4 w-4 mr-2" />
+                {deleteMutation.isPending ? 'Deleting...' : 'Delete Post'}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </CardHeader>
 
