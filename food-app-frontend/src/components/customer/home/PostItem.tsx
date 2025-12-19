@@ -23,6 +23,7 @@ import {
   ChevronDown,
   ExternalLink,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import { postService } from '@/services/postService';
 import type { Post } from '@/types';
@@ -140,6 +141,11 @@ const PostItem: React.FC<PostItemProps> = ({
     }
   }, [deleteMutation, post.id]);
 
+  const handleEditPost = useCallback(() => {
+    // TODO: Implement edit functionality
+    console.log('Edit post:', post.id);
+  }, [post.id]);
+
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -198,14 +204,21 @@ const PostItem: React.FC<PostItemProps> = ({
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="w-32">
+              <DropdownMenuItem 
+                onClick={handleEditPost}
+                className="text-xs cursor-pointer flex items-center gap-2"
+              >
+                <Pencil className="h-3 w-3" />
+                <span>Edit</span>
+              </DropdownMenuItem>
               <DropdownMenuItem 
                 onClick={handleDeletePost}
                 disabled={deleteMutation.isPending}
-                className="text-destructive focus:text-destructive cursor-pointer"
+                className="text-xs text-destructive focus:text-destructive cursor-pointer flex items-center gap-2"
               >
-                <Trash2 className="h-4 w-4 mr-2" />
-                {deleteMutation.isPending ? 'Deleting...' : 'Delete Post'}
+                <Trash2 className="h-3 w-3" />
+                <span>{deleteMutation.isPending ? 'Deleting...' : 'Delete'}</span>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
