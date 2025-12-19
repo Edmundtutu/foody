@@ -92,23 +92,9 @@ const PostCreationActions: React.FC<PostCreationActionsProps> = ({
           className="text-[10px] h-6 px-2 w-full"
         >
           <MapPin className="h-2.5 w-2.5 mr-1" />
-          Tag Shop
+          Tag Restaurant
         </Button>
       </div>
-
-      {/* Hidden file input for upload functionality */}
-      <input
-        type="file"
-        accept="image/*"
-        multiple
-        onChange={(e) => {
-          // Handle file upload logic here
-          // This should be passed down as a prop or handled in parent
-        }}
-        className="hidden"
-        id="photo-upload"
-        disabled={isMax}
-      />
     </div>
   );
 };

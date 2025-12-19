@@ -1,12 +1,12 @@
 import React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Textarea } from '@/components/ui/textarea';
-import type { User } from '@/types';
+import type { AuthUser } from '@/types';
 import ImageCarouselPreview from './ImageCarouselPreview';
 import PostCreationActions from './PostCreationActions';
 
 interface CreatePostExpandedProps {
-  user: User | null;
+  user: AuthUser | null;
   content: string;
   onContentChange: (value: string) => void;
   images: string[];

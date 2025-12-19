@@ -91,9 +91,9 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => 
   }
 
   return (
-    <div className="absolute inset-0 bg-black flex flex-col">
+    <div className="fixed inset-0 bg-black flex flex-col z-[100]">
       {/* Header */}
-      <div className="flex justify-between items-center p-4 bg-black/50 text-white">
+      <div className="flex justify-between items-center p-4 bg-black/50 text-white z-[101]">
         <Button variant="ghost" size="icon" onClick={onClose} className="text-white hover:bg-white/20">
           <X className="h-6 w-6" />
         </Button>
@@ -134,8 +134,8 @@ const CameraCapture: React.FC<CameraCaptureProps> = ({ onCapture, onClose }) => 
       </div>
 
       {/* Controls - sticky bottom with gradient background */}
-      <div className="sticky bottom-0 left-0 w-full p-6" style={{zIndex: 10}}>
-        <div className="absolute inset-0 h-full w-full pointer-events-none" style={{background: 'linear-gradient(to top, rgba(0,0,0,0.85) 80%, rgba(0,0,0,0.2) 100%)', zIndex: 0}} />
+      <div className="sticky bottom-0 left-0 w-full p-6 z-[101]">
+        <div className="absolute inset-0 h-full w-full pointer-events-none" style={{background: 'linear-gradient(to top, rgba(0,0,0,0.85) 80%, rgba(0,0,0,0.2) 100%)'}} />
         <div className="relative z-10">
           {capturedImage ? (
             <div className="flex gap-4 justify-center">

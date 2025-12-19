@@ -235,7 +235,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                         <div className="w-full min-w-0">
                           <CreatePostCard
                               imageCapture={imageCapture}
-                              createContext={{ shopId: order.restaurant_id, productId: (order.items?.[0]?.dish_id) }}
+                              createContext={{ restaurantId: order.restaurant_id, dishId: (order.items?.[0]?.dish_id) }}
                               forceExpanded={true}
                           />
                         </div>
@@ -292,7 +292,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
           {/* Camera modal - only for customer context */}
           {context === 'customer' && imageCapture.showCameraModal && (
-              <div className="fixed inset-0 z-50 bg-background">
+              <div className="fixed inset-0 z-[100] bg-background">
                 <CameraCapture
                     onCapture={(img) => imageCapture.handleCameraCapture(img)}
                     onClose={() => imageCapture.handleCameraClose()}

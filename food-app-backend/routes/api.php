@@ -1,25 +1,30 @@
 <?php
 
-use App\Http\Controllers\Api\Chats\ConversationController;
-use App\Http\Controllers\Api\Chats\MessageController;
-use App\Http\Controllers\Api\Combos\ComboCalculationController;
-use App\Http\Controllers\Api\Combos\ComboController;
-use App\Http\Controllers\Api\Combos\ComboGroupController;
-use App\Http\Controllers\Api\Combos\ComboGroupItemController;
-use App\Http\Controllers\Api\Combos\ComboSelectionController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Dishes\DishController;
-use App\Http\Controllers\Api\Dishes\DishOptionController;
-use App\Http\Controllers\Api\Inventory\KitchenController;
-use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
+use App\Http\Controllers\Api\Combos\ComboController;
 use App\Http\Controllers\Api\Orders\OrderController;
-use App\Http\Controllers\Api\Restaurants\RestaurantController;
+use App\Http\Controllers\Api\Chats\MessageController;
 use App\Http\Controllers\Api\Reviews\ReviewController;
 use App\Http\Controllers\Api\Uploads\UploadController;
 use App\Http\Controllers\Api\VendorAnalyticsController;
-use App\Http\Controllers\Auth\AuthenticatedSessionController;
 use App\Http\Controllers\Auth\RegisteredUserController;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Combos\ComboGroupController;
+use App\Http\Controllers\Api\Dishes\DishOptionController;
+use App\Http\Controllers\Api\Inventory\KitchenController;
+use App\Http\Controllers\Api\PostHandlers\LikeController;
+use App\Http\Controllers\Api\PostHandlers\PostController;
+use App\Http\Controllers\Api\Chats\ConversationController;
+use App\Http\Controllers\Api\PostHandlers\CommentController;
+use App\Http\Controllers\Api\Combos\ComboGroupItemController;
+use App\Http\Controllers\Api\Combos\ComboSelectionController;
+use App\Http\Controllers\Auth\AuthenticatedSessionController;
+use App\Http\Controllers\Api\Restaurants\RestaurantController;
+use App\Http\Controllers\Api\Combos\ComboCalculationController;
+use App\Http\Controllers\Api\PostHandlers\CommentLikeController;
+use App\Http\Controllers\Api\PostHandlers\PostCommentController;
+use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
 
 Route::prefix('v1')->group(function () {
     // Public auth endpoints
@@ -36,6 +41,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/dishes/tags/popular', [DishController::class, 'getPopularTags']);
     Route::get('/reviews', [ReviewController::class, 'index']);
     Route::get('/reviews/{id}', [ReviewController::class, 'show']);
+
+    Route::apiResource('posts', PostController::class)->only(['index', 'show']);
+
 
     // Combos (public consumption) - discovery endpoints
     Route::get('/combos/tags/popular', [ComboController::class, 'getPopularTags']);
@@ -118,7 +126,7 @@ Route::prefix('v1')->group(function () {
         // Order-specific conversation endpoints
         Route::post('/orders/{orderId}/conversations', [ConversationController::class, 'store']);
         Route::get('/orders/{orderId}/conversations', [ConversationController::class, 'getForOrder']);
-        
+
         // Conversation message endpoints
         Route::post('/conversations/{conversationId}/messages', [MessageController::class, 'store']);
         Route::get('/conversations/{conversationId}/messages', [MessageController::class, 'index']);
@@ -134,6 +142,22 @@ Route::prefix('v1')->group(function () {
 
         // Uploads
         Route::post('/uploads/dishes', [UploadController::class, 'uploadDishImages']);
+
+        // Social Features
+
+        // Comment routes
+        Route::apiResource('comments', CommentController::class);
+        Route::post('/comments/{comment}/like', [CommentLikeController::class, 'toggle']);
+        Route::apiResource('posts.comments', PostCommentController::class)->middleware('auth:sanctum');
+
+
+        // Post routes
+        Route::apiResource('posts', PostController::class)->only(['store', 'update', 'destroy']);
+        Route::post('/posts/{post}/like', [PostController::class, 'likeOrUnlike']);
+
+        // Like routes
+        Route::post('likes', [LikeController::class, 'store']);
+        Route::delete('likes', [LikeController::class, 'destroy']);
     });
 
     // Kitchen Graph Management (auth required)

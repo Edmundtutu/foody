@@ -7,8 +7,8 @@ import type { ApiResponse, Post } from '@/types';
 interface CreatePostData {
     content: string;
     images?: (File | string)[];
-    productId?: string;
-    shopId?: string;
+    dishId?: string;
+    restaurantId?: string;
 }
 
 /**
@@ -37,7 +37,7 @@ export const postService = {
      */
     async getPosts(): Promise<Post[]> {
         const response = await api.get<ApiResponse<Post[]>>(`${apiVersion}/posts`);
-        return response.data.data;
+        return response.data.data || [];
     },
 
     /**
@@ -72,17 +72,20 @@ export const postService = {
             });
         }
 
-        if (postData.productId) {
-            formData.append('product_id', postData.productId);
+        if (postData.dishId) {
+            formData.append('dish_id', postData.dishId);
         }
 
-        if (postData.shopId) {
-            formData.append('shop_id', postData.shopId);
+        if (postData.restaurantId) {
+            formData.append('restaurant_id', postData.restaurantId);
         }
 
         const response = await api.post<ApiResponse<Post>>(`${apiVersion}/posts`, formData, {
             headers: { 'Content-Type': 'multipart/form-data' }
         });
+        if (!response.data.data) {
+            throw new Error('Failed to create post');
+        }
         return response.data.data;
     },
 };

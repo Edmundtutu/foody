@@ -1,10 +1,10 @@
 import React from 'react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import type { User } from '@/types';
+import type { AuthUser } from '@/types';
 
 interface CreatePostCollapsedProps {
-  user: User | null;
+  user: AuthUser | null;
   onExpand: () => void;
 }
 

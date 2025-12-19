@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             ReviewSeeder::class,
             ConversationSeeder::class,
             InventorySeeder::class,
+            SocialSeeder::class, // Social features: posts, comments, likes, follows
         ]);
     }
 }
