@@ -3,11 +3,11 @@ import {
   View,
   Text,
   StyleSheet,
-  SafeAreaView,
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { useOrderStore } from '@/services/orderService';
 import { ChevronLeft, Copy, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react-native';
