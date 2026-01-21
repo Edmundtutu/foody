@@ -12,10 +12,12 @@ export default {
         newArchEnabled: true,
         ios: {
             supportsTablet: true,
+            bundleIdentifier: 'com.edmundtutu.imenuagent',
         },
         android: {
+            package: 'com.edmundtutu.imenuagent',
             adaptiveIcon: {
-                foregroundImage: './assets/images/adaptive-icon.png',
+                foregroundImage: './assets/images/icon.png',
                 backgroundColor: '#ffffff',
             },
         },

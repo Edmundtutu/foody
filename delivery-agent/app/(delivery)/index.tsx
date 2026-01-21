@@ -6,6 +6,7 @@ import {
   ScrollView,
   TouchableOpacity,
   ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -13,7 +14,8 @@ import { useOrderStore } from '@/services/orderService';
 import { GPSTrackingService } from '@/services/gpsTrackingService';
 import { OrderCard } from '@/components/OrderCard';
 import { Order } from '@/types/delivery';
-import { MapPin, Menu } from 'lucide-react-native';
+import { Colors, Typography, Spacing, BorderRadius, Shadows } from '@/constants/theme';
+import { MapPin, Menu, Truck, AlertTriangle, Package } from 'lucide-react-native';
 
 export default function OrdersScreen() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function OrdersScreen() {
   const rider = useOrderStore((state) => state.rider);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -50,11 +53,19 @@ export default function OrdersScreen() {
     setLoading(false);
   };
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    // Simulate refresh - in real app, would fetch from API
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    setRefreshing(false);
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
-          <ActivityIndicator size="large" color="#2563eb" />
+          <ActivityIndicator size="large" color={Colors.primary[500]} />
+          <Text style={styles.loadingText}>Loading...</Text>
         </View>
       </SafeAreaView>
     );
@@ -62,46 +73,80 @@ export default function OrdersScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* Header */}
       <View style={styles.header}>
-        <View>
-          <Text style={styles.greeting}>Hello, {rider.name}</Text>
-          <Text style={styles.subtitle}>{rider.vehicle} Delivery</Text>
+        <View style={styles.headerLeft}>
+          <View style={styles.avatarContainer}>
+            <Truck size={20} color={Colors.primary[500]} />
+          </View>
+          <View>
+            <Text style={styles.greeting}>Hello, {rider.name}</Text>
+            <Text style={styles.subtitle}>{rider.vehicle} • Ready to deliver</Text>
+          </View>
         </View>
         <TouchableOpacity
           onPress={() => router.push('/(delivery)/dashboard')}
           style={styles.dashboardButton}
         >
-          <Menu size={24} color="#2563eb" />
+          <Menu size={24} color={Colors.slate[700]} />
         </TouchableOpacity>
       </View>
 
+      {/* Permission Warning */}
       {!permissionGranted && (
         <View style={styles.permissionWarning}>
-          <Text style={styles.warningTitle}>Location Permission Required</Text>
-          <Text style={styles.warningText}>
-            We need location access to track deliveries
-          </Text>
-          <TouchableOpacity
-            style={styles.permissionButton}
-            onPress={handleRequestPermissions}
-          >
-            <Text style={styles.permissionButtonText}>Enable Location</Text>
-          </TouchableOpacity>
+          <View style={styles.warningIconContainer}>
+            <AlertTriangle size={20} color={Colors.warning[600]} />
+          </View>
+          <View style={styles.warningContent}>
+            <Text style={styles.warningTitle}>Location Permission Required</Text>
+            <Text style={styles.warningText}>
+              We need location access to track deliveries and show your position to customers.
+            </Text>
+            <TouchableOpacity
+              style={styles.permissionButton}
+              onPress={handleRequestPermissions}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.permissionButtonText}>Enable Location</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+      {/* Orders List */}
+      <ScrollView 
+        style={styles.content} 
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[Colors.primary[500]]}
+            tintColor={Colors.primary[500]}
+          />
+        }
+      >
         <View style={styles.ordersSection}>
           <View style={styles.sectionHeader}>
-            <MapPin size={20} color="#2563eb" />
-            <Text style={styles.sectionTitle}>
-              Assigned Orders ({orders.length})
-            </Text>
+            <View style={styles.sectionIconContainer}>
+              <MapPin size={18} color={Colors.primary[500]} />
+            </View>
+            <Text style={styles.sectionTitle}>Assigned Orders</Text>
+            <View style={styles.orderCountBadge}>
+              <Text style={styles.orderCountText}>{orders.length}</Text>
+            </View>
           </View>
 
           {orders.length === 0 ? (
             <View style={styles.emptyState}>
-              <Text style={styles.emptyStateText}>No orders assigned yet</Text>
+              <View style={styles.emptyIconContainer}>
+                <Package size={48} color={Colors.slate[300]} />
+              </View>
+              <Text style={styles.emptyStateTitle}>No Orders Yet</Text>
+              <Text style={styles.emptyStateText}>
+                New orders will appear here when they're assigned to you
+              </Text>
             </View>
           ) : (
             orders.map((order) => (
@@ -114,6 +159,9 @@ export default function OrdersScreen() {
             ))
           )}
         </View>
+
+        {/* Bottom Spacer */}
+        <View style={{ height: Spacing['2xl'] }} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -122,95 +170,173 @@ export default function OrdersScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: Colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    backgroundColor: '#fff',
+    paddingHorizontal: Spacing.base,
+    paddingVertical: Spacing.md,
+    backgroundColor: Colors.card,
     borderBottomWidth: 1,
-    borderBottomColor: '#e2e8f0',
+    borderBottomColor: Colors.slate[200],
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.md,
+  },
+  avatarContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   greeting: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#1e293b',
+    fontSize: Typography.fontSize.lg,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.slate[900],
   },
   subtitle: {
-    fontSize: 12,
-    color: '#64748b',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.slate[500],
     marginTop: 2,
   },
   dashboardButton: {
-    padding: 8,
+    width: 44,
+    height: 44,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.slate[50],
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   permissionWarning: {
-    backgroundColor: '#fef3c7',
+    flexDirection: 'row',
+    backgroundColor: Colors.warning[50],
     borderLeftWidth: 4,
-    borderLeftColor: '#f59e0b',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginHorizontal: 12,
-    marginTop: 12,
-    borderRadius: 8,
+    borderLeftColor: Colors.warning[500],
+    marginHorizontal: Spacing.base,
+    marginTop: Spacing.base,
+    padding: Spacing.base,
+    borderRadius: BorderRadius.base,
+    gap: Spacing.md,
+  },
+  warningIconContainer: {
+    width: 36,
+    height: 36,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.warning[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  warningContent: {
+    flex: 1,
   },
   warningTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#92400e',
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.warning[700],
     marginBottom: 4,
   },
   warningText: {
-    fontSize: 13,
-    color: '#b45309',
-    marginBottom: 8,
+    fontSize: Typography.fontSize.sm,
+    color: Colors.warning[600],
+    marginBottom: Spacing.sm,
+    lineHeight: 18,
   },
   permissionButton: {
-    backgroundColor: '#f59e0b',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 6,
+    backgroundColor: Colors.warning[500],
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.sm,
     alignSelf: 'flex-start',
   },
   permissionButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 12,
+    color: '#ffffff',
+    fontWeight: Typography.fontWeight.semibold,
+    fontSize: Typography.fontSize.sm,
   },
   content: {
     flex: 1,
   },
   ordersSection: {
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: Spacing.base,
+    paddingTop: Spacing.base,
   },
   sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
+    marginBottom: Spacing.base,
+  },
+  sectionIconContainer: {
+    width: 32,
+    height: 32,
+    borderRadius: BorderRadius.base,
+    backgroundColor: Colors.primary[50],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: Spacing.sm,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1e293b',
+    flex: 1,
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.slate[900],
   },
-  emptyState: {
-    backgroundColor: '#fff',
-    paddingVertical: 32,
-    borderRadius: 12,
+  orderCountBadge: {
+    backgroundColor: Colors.primary[500],
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.full,
+    minWidth: 28,
     alignItems: 'center',
   },
+  orderCountText: {
+    color: '#ffffff',
+    fontSize: Typography.fontSize.sm,
+    fontWeight: Typography.fontWeight.bold,
+  },
+  emptyState: {
+    backgroundColor: Colors.card,
+    paddingVertical: Spacing['3xl'],
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.md,
+    alignItems: 'center',
+    ...Shadows.sm,
+  },
+  emptyIconContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.slate[100],
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.base,
+  },
+  emptyStateTitle: {
+    fontSize: Typography.fontSize.md,
+    fontWeight: Typography.fontWeight.semibold,
+    color: Colors.slate[700],
+    marginBottom: Spacing.xs,
+  },
   emptyStateText: {
-    fontSize: 14,
-    color: '#64748b',
+    fontSize: Typography.fontSize.sm,
+    color: Colors.slate[500],
+    textAlign: 'center',
+    lineHeight: 20,
   },
   centerContent: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    gap: Spacing.md,
+  },
+  loadingText: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.slate[500],
+    fontWeight: Typography.fontWeight.medium,
   },
 });

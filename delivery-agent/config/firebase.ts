@@ -1,8 +1,6 @@
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { getDatabase } from 'firebase/database';
-// @ts-ignore - getReactNativePersistence exists in firebase/auth/react-native
-import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
-import ReactNativeAsyncStorage from '@react-native-async-storage/async-storage';
+import { getAuth } from 'firebase/auth';
 import Constants from 'expo-constants';
 
 const extra = Constants.expoConfig?.extra ?? {};
@@ -18,10 +16,10 @@ export const firebaseConfig = {
   measurementId: extra.firebaseMeasurementId,
 };
 
-const app = initializeApp(firebaseConfig);
+// Initialize Firebase app (avoid duplicate initialization)
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
 export const database = getDatabase(app);
-export const auth = initializeAuth(app, {
-  persistence: getReactNativePersistence(ReactNativeAsyncStorage)
-});
+export const auth = getAuth(app);
 
 export default app;
