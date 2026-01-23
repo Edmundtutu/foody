@@ -19,13 +19,17 @@ import VendorAnalytics from '@/pages/vendor/Analytics';
 import VendorProfile from '@/pages/vendor/Profile';
 import VendorMenu from '@/pages/vendor/Menu';
 import VendorAccount from '@/pages/vendor/Account';
+import VendorAgents from '@/pages/vendor/Agents';
+import VendorDeliveries from '@/pages/vendor/Deliveries';
+
+// Shared Pages
+import OrderDetails from '@/pages/shared/OrderDetails';
 
 // Customer Pages (placeholders - to be implemented)
 import Home from '@/pages/customer/Home.tsx';
 import FindFood from '@/pages/customer/FindFood.tsx';
 import Restaurants from '@/pages/customer/Restaurants.tsx';
 import Favorites from '@/pages/customer/Favorites.tsx';
-import Order from '@/pages/customer/Order.tsx';
 import Profile from '@/pages/customer/Profile.tsx';
 import MyMeal from '@/pages/customer/MyMeal.tsx';
 import DishDetail from '@/pages/customer/DishDetail.tsx';
@@ -132,9 +136,9 @@ const AppRoutes: React.FC = () => {
                         <Favorites />
                     </ProtectedRoute>
                 } />
-                <Route path="/order" element={
+                <Route path="/orders/:orderId" element={
                     <ProtectedRoute layout="main">
-                        <Order />
+                        <OrderDetails />
                     </ProtectedRoute>
                 } />
                 <Route path="/profile" element={
@@ -178,6 +182,11 @@ const AppRoutes: React.FC = () => {
                         <VendorOrders />
                     </ProtectedRoute>
                 } />
+                <Route path="/vendor/orders/:orderId" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <OrderDetails />
+                    </ProtectedRoute>
+                } />
                 <Route path="/vendor/analytics" element={
                     <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
                         <VendorAnalytics />
@@ -196,6 +205,16 @@ const AppRoutes: React.FC = () => {
                 <Route path="/vendor/account" element={
                     <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
                         <VendorAccount />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/agents" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorAgents />
+                    </ProtectedRoute>
+                } />
+                <Route path="/vendor/deliveries" element={
+                    <ProtectedRoute requiredRole={['restaurant']} layout="vendor">
+                        <VendorDeliveries />
                     </ProtectedRoute>
                 } />
 

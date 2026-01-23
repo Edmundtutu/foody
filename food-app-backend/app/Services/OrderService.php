@@ -22,6 +22,8 @@ class OrderService
                 'restaurant_id' => $data['restaurant_id'],
                 'total' => 0,
                 'status' => 'pending',
+                'order_type' => $data['order_type'],
+                'delivery_address' => $data['delivery_address'] ?? null,
                 'notes' => $data['notes'] ?? null,
             ]);
 
@@ -204,6 +206,7 @@ class OrderService
             },
             'restaurant',
             'user',
+            'logistics.agent',
         ];
     }
 }

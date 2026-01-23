@@ -31,6 +31,8 @@ export default {
             typedRoutes: true,
         },
         extra: {
+            // API configuration
+            apiBaseUrl: process.env.API_BASE_URL || 'http://localhost:8000/api/v1',
             // Firebase configuration
             firebaseApiKey: process.env.FIREBASE_API_KEY,
             firebaseAuthDomain: process.env.FIREBASE_AUTH_DOMAIN,

@@ -7,12 +7,25 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ShoppingCart, UtensilsCrossed, ArrowLeft, Info } from 'lucide-react';
 import orderService from '@/services/orderService';
-import type { CreateOrderData } from '@/types/orders';
+import type { CreateOrderData, CreateOrderItem } from '@/types/orders';
+import type { DeliveryAddress, OrderType } from '@/types/delivery';
 import type { MealItem } from '@/context/MealContext';
 import RestaurantSectionsMobile from '@/components/customer/mymeal/RestaurantSectionsMobile';
 import RestaurantSectionsDesktop from '@/components/customer/mymeal/RestaurantSectionsDesktop';
 import ContactInformationCard from '@/components/customer/mymeal/ContactInformationCard';
 import DeliveryOptionsCard from '@/components/customer/mymeal/DeliveryOptionsCard';
+
+// Default empty address
+const defaultDeliveryAddress: DeliveryAddress = {
+    street: '',
+    city: '',
+    state: '',
+    postal_code: '',
+    country: 'Uganda',
+    lat: undefined,
+    lng: undefined,
+    instructions: '',
+};
 
 const MyMeal: React.FC = () => {
     const navigate = useNavigate();
@@ -29,8 +42,8 @@ const MyMeal: React.FC = () => {
         getItemsByRestaurant,
     } = useMeal();
 
-    const [deliveryType, setDeliveryType] = useState<'pickup' | 'delivery'>('pickup');
-    const [deliveryAddress, setDeliveryAddress] = useState('');
+    const [orderType, setOrderType] = useState<OrderType>('TAKEAWAY');
+    const [deliveryAddress, setDeliveryAddress] = useState<DeliveryAddress>(defaultDeliveryAddress);
     const [notes, setNotes] = useState('');
     const [customerEmail, setCustomerEmail] = useState(user?.email || '');
     const [customerName, setCustomerName] = useState(user?.name || '');
@@ -51,7 +64,7 @@ const MyMeal: React.FC = () => {
 
     const itemCount = getItemCount();
     const subtotal = useMemo(() => getTotalPrice(), [mealItems]);
-    const deliveryFee = deliveryType === 'delivery' ? 5000 : 0;
+    const deliveryFee = orderType === 'DELIVERY' ? 5000 : 0;
     const total = subtotal + deliveryFee;
 
     const getItemTotal = (item: MealItem) => {
@@ -83,10 +96,10 @@ const MyMeal: React.FC = () => {
             return;
         }
 
-        if (deliveryType === 'delivery' && !deliveryAddress.trim()) {
+        if (orderType === 'DELIVERY' && !deliveryAddress.street.trim()) {
             toast({
                 title: 'Delivery address required',
-                description: 'Please enter your delivery address',
+                description: 'Please enter your street address',
                 variant: 'destructive',
             });
             return;
@@ -99,7 +112,7 @@ const MyMeal: React.FC = () => {
             const orderPromises = Object.entries(itemsByRestaurant).map(([restaurantId, items]) => {
                 const orderData: CreateOrderData = {
                     restaurant_id: restaurantId,
-                    items: items.map(item => {
+                    items: items.map((item): CreateOrderItem => {
                         if (item.type === 'dish') {
                             const dishPrice = item.dish.price;
                             const optionsPrice = item.selectedOptions.reduce((sum, opt) => sum + opt.extra_cost, 0);
@@ -129,8 +142,9 @@ const MyMeal: React.FC = () => {
                             };
                         }
                     }),
+                    order_type: orderType,
                     notes: notes.trim() || undefined,
-                    delivery_address: deliveryType === 'delivery' ? deliveryAddress : undefined,
+                    delivery_address: orderType === 'DELIVERY' ? deliveryAddress : undefined,
                 };
 
                 return orderService.createOrder(orderData);
@@ -222,8 +236,8 @@ const MyMeal: React.FC = () => {
                 />
 
                 <DeliveryOptionsCard
-                    deliveryType={deliveryType}
-                    setDeliveryType={setDeliveryType}
+                    orderType={orderType}
+                    setOrderType={setOrderType}
                     deliveryAddress={deliveryAddress}
                     setDeliveryAddress={setDeliveryAddress}
                     notes={notes}
@@ -284,7 +298,7 @@ const MyMeal: React.FC = () => {
                         onClick={handlePlaceOrder}
                         disabled={
                             isProcessingOrder ||
-                            (deliveryType === 'delivery' && !deliveryAddress.trim()) ||
+                            (orderType === 'DELIVERY' && !deliveryAddress.street.trim()) ||
                             !customerEmail.trim() ||
                             !customerName.trim()
                         }
@@ -321,8 +335,8 @@ const MyMeal: React.FC = () => {
                         />
 
                         <DeliveryOptionsCard
-                            deliveryType={deliveryType}
-                            setDeliveryType={setDeliveryType}
+                            orderType={orderType}
+                            setOrderType={setOrderType}
                             deliveryAddress={deliveryAddress}
                             setDeliveryAddress={setDeliveryAddress}
                             notes={notes}
@@ -363,7 +377,7 @@ const MyMeal: React.FC = () => {
                                             onClick={handlePlaceOrder}
                                             disabled={
                                                 isProcessingOrder ||
-                                                (deliveryType === 'delivery' && !deliveryAddress.trim()) ||
+                                                (orderType === 'DELIVERY' && !deliveryAddress.street.trim()) ||
                                                 !customerEmail.trim() ||
                                                 !customerName.trim()
                                             }

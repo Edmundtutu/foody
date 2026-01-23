@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import type { Order } from '@/types';
+import type { Order, OrderItem } from '@/types';
 import {
   MapPin,
   User as UserIcon,
@@ -10,13 +11,17 @@ import {
   ChevronUp,
   Check,
   X,
-  MessageCircle
+  MessageCircle,
+  Truck,
+  ExternalLink,
+  Layers,
 } from 'lucide-react';
 import CreatePostCard from '@/components/customer/profile/orders/CreatePostCard';
 import { useImageCapture } from '@/hooks/useImageCapture';
 import CameraCapture from '@/components/features/CameraCapture';
 import { useToast } from '@/hooks/use-toast';
 import { OrderChat } from '@/components/vendor/OrderChat';
+import { DELIVERY_STATUS_CONFIG } from '@/types/delivery';
 
 type OrderCardContext = 'customer' | 'vendor';
 
@@ -44,6 +49,41 @@ const getStatusBadgeVariant = (status: Order['status']): 'default' | 'secondary'
 
 const formatUGX = (value: number) => `UGX ${Number(value).toLocaleString()}`;
 
+/**
+ * Get display name for an order item (handles both dish and combo types)
+ */
+const getOrderItemName = (item: OrderItem): string => {
+  // Check if it's a combo item
+  if (item.type === 'combo' || item.combo_selection_id) {
+    // Try to get combo name from selection
+    if (item.combo_selection) {
+      const itemCount = item.combo_selection.items?.length || 0;
+      // Generate name from selected dishes if available
+      if (item.combo_selection.items && item.combo_selection.items.length > 0) {
+        const dishNames = item.combo_selection.items
+          .slice(0, 2)
+          .map(i => i.dish?.name || 'Item')
+          .join(', ');
+        return itemCount > 2 
+          ? `Combo: ${dishNames} +${itemCount - 2} more`
+          : `Combo: ${dishNames}`;
+      }
+      return `Combo (${itemCount} items)`;
+    }
+    return 'Combo';
+  }
+  
+  // Regular dish item
+  return item.dish?.name || item.product?.name || 'Item';
+};
+
+/**
+ * Check if item is a combo
+ */
+const isComboItem = (item: OrderItem): boolean => {
+  return item.type === 'combo' || !!item.combo_selection_id;
+};
+
 export const OrderCard: React.FC<OrderCardProps> = ({
                                                       order,
                                                       context,
@@ -52,6 +92,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
                                                       onConfirm,
                                                       onReject,
                                                     }) => {
+  const navigate = useNavigate();
   const [isComposerOpen, setIsComposerOpen] = useState(false);
   const [isActionInProgress, setIsActionInProgress] = useState(false);
   const [hasActionCompleted, setHasActionCompleted] = useState(false);
@@ -60,10 +101,28 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   const { toast } = useToast();
 
   const createdAt = new Date(order.created_at);
-  const deliveryType = order.delivery_address && order.delivery_address !== 'N/A for pickup' ? 'Delivery' : 'Pickup';
+  
+  // Map order_type to display label
+  const orderTypeLabel = {
+    'DINE_IN': 'Dine In',
+    'TAKEAWAY': 'Takeaway',
+    'DELIVERY': 'Delivery',
+  }[order.order_type] || order.order_type || 'Takeaway';
+  
+  const isDeliveryOrder = order.order_type === 'DELIVERY';
 
   // Check if order is in a state that allows confirm/reject actions
   const canPerformActions = order.status === 'pending';
+
+  // Navigate to order details
+  const handleViewDetails = (e: React.MouseEvent) => {
+    // Prevent navigation if clicking on interactive elements
+    if ((e.target as HTMLElement).closest('button, a, [role="button"]')) {
+      return;
+    }
+    const path = context === 'vendor' ? `/vendor/orders/${order.id}` : `/orders/${order.id}`;
+    navigate(path);
+  };
 
   // Handle chat button click
   const handleChatClick = () => {
@@ -115,22 +174,33 @@ export const OrderCard: React.FC<OrderCardProps> = ({
   };
 
   return (
-      <Card className="h-full flex flex-col relative w-full min-w-0">
+      <Card 
+        className="h-full flex flex-col relative w-full min-w-0 cursor-pointer hover:shadow-md transition-shadow"
+        onClick={handleViewDetails}
+      >
         <CardHeader className="p-2 sm:p-3 lg:p-4 pb-2">
           <div className="flex items-start justify-between gap-1.5 sm:gap-2">
             <div className="flex-1 min-w-0 pr-1">
-              <CardTitle className="text-xs sm:text-sm md:text-base truncate leading-tight">
-                Order #{order.id}
+              <CardTitle className="text-xs sm:text-sm md:text-base truncate leading-tight flex items-center gap-1">
+                Order #{order.id.slice(-8).toUpperCase()}
+                <ExternalLink className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
               </CardTitle>
               <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 leading-tight">
                 {createdAt.toLocaleDateString()}
               </p>
             </div>
-            <div className="text-right flex-shrink-0 min-w-0">
-              <Badge variant={getStatusBadgeVariant(order.status)} className="capitalize text-[9px] sm:text-xs px-1 py-0.5">
-                {order.status}
-              </Badge>
-              <p className="text-xs sm:text-sm md:text-base font-bold mt-0.5 leading-tight">
+            <div className="text-right flex-shrink-0 min-w-0 space-y-1">
+              <div className="flex items-center gap-1 justify-end flex-wrap">
+                <Badge variant={getStatusBadgeVariant(order.status)} className="capitalize text-[9px] sm:text-xs px-1 py-0.5">
+                  {order.status}
+                </Badge>
+                {isDeliveryOrder && (
+                  <Badge variant="outline" className="text-[9px] sm:text-xs px-1 py-0.5 gap-0.5">
+                    <Truck className="h-2.5 w-2.5" />
+                  </Badge>
+                )}
+              </div>
+              <p className="text-xs sm:text-sm md:text-base font-bold leading-tight">
                 {formatUGX(order.total)}
               </p>
             </div>
@@ -138,11 +208,22 @@ export const OrderCard: React.FC<OrderCardProps> = ({
         </CardHeader>
 
         <CardContent className="p-2 sm:p-3 lg:p-4 pt-0 flex-1 flex flex-col min-w-0">
+          {/* Delivery status badge - only show when agent is assigned (not PENDING) */}
+          {isDeliveryOrder && order.logistics && order.logistics.delivery_status !== 'PENDING' && (
+            <div className="mb-2">
+              <Badge 
+                className={`text-[9px] sm:text-xs px-1.5 py-0.5 ${DELIVERY_STATUS_CONFIG[order.logistics.delivery_status]?.bgColor || 'bg-gray-100'} ${DELIVERY_STATUS_CONFIG[order.logistics.delivery_status]?.color || 'text-gray-700'}`}
+              >
+                {DELIVERY_STATUS_CONFIG[order.logistics.delivery_status]?.label || order.logistics.delivery_status}
+              </Badge>
+            </div>
+          )}
+
           <div className="flex items-center gap-1 sm:gap-2 mb-2 text-[10px] sm:text-xs text-muted-foreground min-w-0">
             {context === 'customer' ? (
                 <>
                   <StoreIcon className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0" />
-                  <span className="truncate flex-1 min-w-0">{order.shop?.name ?? 'Shop'}</span>
+                  <span className="truncate flex-1 min-w-0">{order.shop?.name ?? order.restaurant?.name ?? 'Shop'}</span>
                 </>
             ) : (
                 <>
@@ -152,14 +233,15 @@ export const OrderCard: React.FC<OrderCardProps> = ({
             )}
             <span className="mx-0.5 sm:mx-1 flex-shrink-0 text-[8px] sm:text-[10px]">•</span>
             <MapPin className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-4 md:w-4 flex-shrink-0" />
-            <span className="truncate max-w-[3rem] sm:max-w-none">{deliveryType}</span>
+            <span className="truncate max-w-[3rem] sm:max-w-none">{orderTypeLabel}</span>
           </div>
 
           <div className="space-y-1 sm:space-y-1.5 flex-1 mb-2 min-w-0">
             {(order.items || []).slice(0, 3).map((item) => (
                 <div key={item.id} className="flex items-center justify-between text-[10px] sm:text-xs gap-1 sm:gap-2 min-w-0">
-              <span className="truncate flex-1 min-w-0 leading-tight">
-                {(item.product?.name ?? 'Item')} × {item.quantity}
+              <span className="truncate flex-1 min-w-0 leading-tight flex items-center gap-1">
+                {isComboItem(item) && <Layers className="h-3 w-3 flex-shrink-0 text-muted-foreground" />}
+                {getOrderItemName(item)} × {item.quantity}
               </span>
                   <span className="flex-shrink-0 font-medium text-[9px] sm:text-xs">
                 {formatUGX(item.unit_price * item.quantity)}
@@ -175,7 +257,7 @@ export const OrderCard: React.FC<OrderCardProps> = ({
 
           <div className="flex flex-wrap gap-1 mt-auto mb-2">
             <Badge variant="outline" className="text-[9px] sm:text-xs px-1 py-0.5 leading-tight">
-              {deliveryType}
+              {orderTypeLabel}
             </Badge>
             {order.notes && (
                 <Badge

@@ -9,6 +9,7 @@ export interface LocationWithName extends Location {
 
 export interface Order {
   orderId: string;
+  logisticsId?: string; // Backend logistics record ID for status updates
   restaurantId: string;
   customer: {
     name: string;
@@ -24,7 +25,7 @@ export interface Order {
   createdAt: number;
 }
 
-export type OrderStatus = 'ASSIGNED' | 'PICKED_UP' | 'ON_THE_WAY' | 'DELIVERED';
+export type OrderStatus = 'PENDING' | 'ASSIGNED' | 'PICKED_UP' | 'ON_THE_WAY' | 'DELIVERED';
 
 export interface RiderProfile {
   riderId: string;

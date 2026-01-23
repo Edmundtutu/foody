@@ -8,6 +8,7 @@ import {
   Store,
   Package,
   BarChart3,
+  Truck,
 } from 'lucide-react';
 import Dish from '@/assets/icons/dish.svg?react';
 import { useAuth } from '@/context/AuthContext';
@@ -44,6 +45,7 @@ const MobileBottomNav: React.FC = () => {
     { name: 'Dashboard', href: '/vendor/dashboard', icon: BarChart3 },
     { name: 'In Kitchen', href: '/vendor/kitchen', icon: Package },
     { name: 'Orders', href: '/vendor/orders', icon: ShoppingCart },
+    { name: 'Deliveries', href: '/vendor/deliveries', icon: Truck },
     { name: 'Restaurant', href: '/vendor/profile', icon: Store },
   ];
 

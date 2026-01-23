@@ -24,8 +24,17 @@ class OrderRequest extends FormRequest
     {
         return [
             'restaurant_id' => 'required|exists:restaurants,id',
+            'order_type' => ['required', Rule::in(['DINE_IN', 'TAKEAWAY', 'DELIVERY'])],
             'notes' => 'nullable|string',
-            'delivery_address' => 'nullable|string',
+            'delivery_address' => 'nullable|array',
+            'delivery_address.street' => 'required_with:delivery_address|string',
+            'delivery_address.city' => 'nullable|string',
+            'delivery_address.state' => 'nullable|string',
+            'delivery_address.postal_code' => 'nullable|string',
+            'delivery_address.country' => 'nullable|string',
+            'delivery_address.lat' => 'nullable|numeric',
+            'delivery_address.lng' => 'nullable|numeric',
+            'delivery_address.instructions' => 'nullable|string',
             'items' => 'required|array|min:1',
             'items.*.type' => ['required', Rule::in(['dish', 'combo'])],
             'items.*.dish_id' => ['required_if:items.*.type,dish', 'nullable', 'exists:dishes,id'],

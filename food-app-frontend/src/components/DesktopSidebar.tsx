@@ -15,6 +15,8 @@ import {
   Settings,
   Utensils,
   CookingPot,
+  Truck,
+  Users,
 } from 'lucide-react';
 import DeskBellIcon from '@/assets/icons/desk-bell.svg?react';
 import Dish from '@/assets/icons/dish.svg?react';
@@ -51,6 +53,8 @@ const DesktopSidebar: React.FC = () => {
     { name: 'In Kitchen', href: '/vendor/kitchen', icon: CookingPot },
     { name: 'Menu', href: '/vendor/menu', icon: Utensils },
     { name: 'Orders', href: '/vendor/orders', icon: DeskBellIcon },
+    { name: 'Deliveries', href: '/vendor/deliveries', icon: Truck },
+    { name: 'Agents', href: '/vendor/agents', icon: Users },
     { name: 'Restaurant Profile', href: '/vendor/profile', icon: Store },
     { name: 'Account', href: '/vendor/account', icon: User },
   ];

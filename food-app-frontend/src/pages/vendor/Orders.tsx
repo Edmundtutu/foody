@@ -6,14 +6,6 @@ import {
 } from '@/hooks/queries/useOrders';
 import { Skeleton } from '@/components/ui/skeleton';
 import OrderCard from '@/components/shared/OrderCard';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 
@@ -23,7 +15,6 @@ import type { Order } from '@/types';
 
 const VendorOrders: React.FC = () => {
   const { restaurantId, hasRestaurant, isLoading: vendorLoading } = useVendor();
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   // Fetch orders for the restaurant
@@ -107,7 +98,6 @@ const VendorOrders: React.FC = () => {
     try {
       await updateOrderStatusMutation.mutateAsync({ orderId, status });
       toast.success(`Order status updated to ${status}`);
-      setSelectedOrder(null);
     } catch (error: any) {
       const errorMessage = error?.response?.data?.message ||
         error?.message ||
@@ -254,169 +244,6 @@ const VendorOrders: React.FC = () => {
           ))}
         </div>
       )}
-
-      {/* Order Details Modal */}
-      <Dialog
-        open={!!selectedOrder}
-        onOpenChange={(open) => !open && setSelectedOrder(null)}
-      >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          {selectedOrder && (
-            <>
-              <DialogHeader>
-                <DialogTitle>Order #{selectedOrder.id}</DialogTitle>
-                <DialogDescription>
-                  Order details and status management
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="space-y-4">
-                {/* Order Info */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Status
-                    </p>
-                    <Badge variant="outline" className="mt-1 capitalize">
-                      {selectedOrder.status}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Total
-                    </p>
-                    <p className="text-lg font-semibold mt-1">
-                      {selectedOrder.total.toLocaleString()} UGX
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Customer
-                    </p>
-                    <p className="mt-1">
-                      {selectedOrder.user?.name || 'Unknown'}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Date
-                    </p>
-                    <p className="mt-1">
-                      {new Date(selectedOrder.created_at).toLocaleString()}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Order Items */}
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground mb-2">
-                    Items
-                  </p>
-                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
-                    {selectedOrder.items?.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between p-2 border rounded"
-                      >
-                        <div className="flex-1">
-                          <p className="font-medium">
-                            {item.dish?.name || 'Unknown Dish'}
-                          </p>
-                          <p className="text-sm text-muted-foreground">
-                            Qty: {item.quantity} ×{' '}
-                            {item.unit_price.toLocaleString()} UGX
-                          </p>
-                          {item.notes && (
-                            <p className="text-xs text-muted-foreground mt-1">
-                              Note: {item.notes}
-                            </p>
-                          )}
-                        </div>
-                        <p className="font-semibold ml-2 flex-shrink-0">
-                          {(item.quantity * item.unit_price).toLocaleString()}{' '}
-                          UGX
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Order Notes */}
-                {selectedOrder.notes && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground mb-2">
-                      Order Notes
-                    </p>
-                    <p className="p-2 border rounded bg-muted/50 text-sm">
-                      {selectedOrder.notes}
-                    </p>
-                  </div>
-                )}
-
-                {/* Status Update Buttons */}
-                <div className="flex flex-wrap gap-2 pt-4 border-t">
-                  {selectedOrder.status === 'pending' && (
-                    <>
-                      <Button
-                        onClick={() =>
-                          handleUpdateStatus(selectedOrder.id, 'confirmed')
-                        }
-                        disabled={updateOrderStatusMutation.isPending}
-                        className="flex-1"
-                      >
-                        {updateOrderStatusMutation.isPending ? 'Accepting...' : 'Accept Order'}
-                      </Button>
-                      <Button
-                        onClick={() =>
-                          handleUpdateStatus(selectedOrder.id, 'cancelled')
-                        }
-                        disabled={updateOrderStatusMutation.isPending}
-                        variant="destructive"
-                        className="flex-1"
-                      >
-                        {updateOrderStatusMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
-                      </Button>
-                    </>
-                  )}
-                  {selectedOrder.status === 'confirmed' && (
-                    <Button
-                      onClick={() =>
-                        handleUpdateStatus(selectedOrder.id, 'processing')
-                      }
-                      disabled={updateOrderStatusMutation.isPending}
-                      className="flex-1"
-                    >
-                      {updateOrderStatusMutation.isPending ? 'Starting...' : 'Start Preparing'}
-                    </Button>
-                  )}
-                  {selectedOrder.status === 'processing' && (
-                    <Button
-                      onClick={() =>
-                        handleUpdateStatus(selectedOrder.id, 'ready')
-                      }
-                      disabled={updateOrderStatusMutation.isPending}
-                      className="flex-1"
-                    >
-                      {updateOrderStatusMutation.isPending ? 'Updating...' : 'Mark as Ready'}
-                    </Button>
-                  )}
-                  {selectedOrder.status === 'ready' && (
-                    <Button
-                      onClick={() =>
-                        handleUpdateStatus(selectedOrder.id, 'completed')
-                      }
-                      disabled={updateOrderStatusMutation.isPending}
-                      className="flex-1"
-                    >
-                      {updateOrderStatusMutation.isPending ? 'Completing...' : 'Complete Order'}
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

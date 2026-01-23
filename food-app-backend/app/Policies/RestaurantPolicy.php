@@ -46,5 +46,37 @@ class RestaurantPolicy
     {
         return $user->id === $restaurant->owner_id || $user->role === 'admin';
     }
+
+    /**
+     * Determine if the user can view agents for a restaurant.
+     */
+    public function viewAgents(User $user, Restaurant $restaurant): bool
+    {
+        return $user->id === $restaurant->owner_id || $user->role === 'admin';
+    }
+
+    /**
+     * Determine if the user can manage agents for a restaurant.
+     */
+    public function manageAgents(User $user, Restaurant $restaurant): bool
+    {
+        return $user->id === $restaurant->owner_id || $user->role === 'admin';
+    }
+
+    /**
+     * Determine if the user can view deliveries for a restaurant.
+     */
+    public function viewDeliveries(User $user, Restaurant $restaurant): bool
+    {
+        return $user->id === $restaurant->owner_id || $user->role === 'admin';
+    }
+
+    /**
+     * Determine if the user can manage deliveries for a restaurant.
+     */
+    public function manageDeliveries(User $user, Restaurant $restaurant): bool
+    {
+        return $user->id === $restaurant->owner_id || $user->role === 'admin';
+    }
 }
 

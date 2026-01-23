@@ -51,6 +51,21 @@ class Restaurant extends Model
         return $this->hasMany(Order::class);
     }
 
+    public function agents()
+    {
+        return $this->hasMany(Agent::class);
+    }
+
+    public function activeAgents()
+    {
+        return $this->agents()->where('status', Agent::STATUS_ACTIVE);
+    }
+
+    public function availableAgents()
+    {
+        return $this->agents()->available();
+    }
+
     public function inventoryNodes()
     {
         return $this->hasMany(InventoryNode::class);

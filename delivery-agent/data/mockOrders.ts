@@ -15,7 +15,7 @@ export const MOCK_ORDERS: Order[] = [
     customer: {
       name: 'John Doe',
       phone: '+256700000001',
-    },
+    },  
     pickup: {
       name: 'Demo Restaurant',
       lat: -1.2921,

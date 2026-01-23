@@ -25,8 +25,25 @@ use App\Http\Controllers\Api\Combos\ComboCalculationController;
 use App\Http\Controllers\Api\PostHandlers\CommentLikeController;
 use App\Http\Controllers\Api\PostHandlers\PostCommentController;
 use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
+use App\Http\Controllers\AgentController;
+use App\Http\Controllers\DispatchController;
 
 Route::prefix('v1')->group(function () {
+    // Debug route for testing policies (remove in production)
+    Route::middleware(['auth:sanctum'])->get('/debug/policy-test/{restaurant}', function (Request $request, App\Models\Restaurant $restaurant) {
+        $user = $request->user();
+        return response()->json([
+            'user_id' => $user->id,
+            'user_role' => $user->role,
+            'restaurant_id' => $restaurant->id,
+            'restaurant_owner_id' => $restaurant->owner_id,
+            'is_owner' => $user->id === $restaurant->owner_id,
+            'can_viewAgents' => $user->can('viewAgents', $restaurant),
+            'can_viewDeliveries' => $user->can('viewDeliveries', $restaurant),
+            'can_manageAgents' => $user->can('manageAgents', $restaurant),
+        ]);
+    });
+
     // Public auth endpoints
     Route::post('/register', [RegisteredUserController::class, 'store']);
     Route::post('/login', [AuthenticatedSessionController::class, 'store']);
@@ -170,5 +187,44 @@ Route::prefix('v1')->group(function () {
         Route::delete('/nodes/{id}', [KitchenController::class, 'deleteNode']);
         Route::post('/edges', [KitchenController::class, 'createEdge']);
         Route::delete('/edges/{id}', [KitchenController::class, 'deleteEdge']);
+    });
+
+    // ========================================
+    // Delivery & Courier Management Routes
+    // ========================================
+    Route::middleware(['auth:sanctum'])->group(function () {
+        
+        // Agent Management (Vendor routes)
+        Route::prefix('restaurants/{restaurant}')->group(function () {
+            Route::get('/agents', [AgentController::class, 'index']);
+            Route::get('/agents/available', [AgentController::class, 'available']);
+            Route::post('/agents', [AgentController::class, 'store']);
+            
+            // Delivery/Logistics for restaurant
+            Route::get('/logistics', [DispatchController::class, 'index']);
+            Route::get('/logistics/pending', [DispatchController::class, 'pending']);
+        });
+
+        // Agent CRUD (by agent ID)
+        Route::get('/agents/{agent}', [AgentController::class, 'show']);
+        Route::put('/agents/{agent}', [AgentController::class, 'update']);
+        Route::patch('/agents/{agent}/status', [AgentController::class, 'updateStatus']);
+        Route::patch('/agents/{agent}/availability', [AgentController::class, 'toggleAvailability']);
+        Route::delete('/agents/{agent}', [AgentController::class, 'destroy']);
+
+        // Order Logistics (Dispatch)
+        Route::post('/orders/{order}/logistics', [DispatchController::class, 'createLogistics']);
+        Route::post('/orders/{order}/logistics/assign', [DispatchController::class, 'assignAgent']);
+        Route::post('/orders/{order}/logistics/unassign', [DispatchController::class, 'unassignAgent']);
+
+        // Delivery status update (for agents)
+        Route::patch('/logistics/{logistics}/status', [DispatchController::class, 'updateStatus']);
+
+        // Tracking (for customers)
+        Route::get('/orders/{order}/tracking', [DispatchController::class, 'tracking']);
+        Route::post('/orders/{order}/confirm-delivery', [DispatchController::class, 'confirmDelivery']);
+
+        // Agent's own deliveries (authenticated as agent user)
+        Route::get('/agent/deliveries', [DispatchController::class, 'agentDeliveries']);
     });
 });
