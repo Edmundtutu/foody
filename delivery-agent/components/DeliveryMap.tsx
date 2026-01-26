@@ -41,6 +41,16 @@ interface DeliveryMapProps {
   showRoute?: boolean;
 }
 
+function toFiniteNumber(value: unknown, fallback: number): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : fallback;
+}
+
+function formatCoord(value: unknown, decimals: number): string {
+  const n = toFiniteNumber(value, NaN);
+  return Number.isFinite(n) ? n.toFixed(decimals) : '--';
+}
+
 // Fallback component when maps aren't available
 function MapPlaceholder({
   currentLocation,
@@ -73,7 +83,7 @@ function MapPlaceholder({
               <Text style={styles.locationLabel}>Pickup</Text>
               <Text style={styles.locationName} numberOfLines={1}>{pickup.name}</Text>
               <Text style={styles.locationCoords}>
-                {pickup.lat.toFixed(4)}, {pickup.lng.toFixed(4)}
+                {formatCoord(pickup.lat, 4)}, {formatCoord(pickup.lng, 4)}
               </Text>
             </View>
           </View>
@@ -94,7 +104,7 @@ function MapPlaceholder({
               <Text style={styles.locationLabel}>Dropoff</Text>
               <Text style={styles.locationName} numberOfLines={1}>{dropoff.name}</Text>
               <Text style={styles.locationCoords}>
-                {dropoff.lat.toFixed(4)}, {dropoff.lng.toFixed(4)}
+                {formatCoord(dropoff.lat, 4)}, {formatCoord(dropoff.lng, 4)}
               </Text>
             </View>
           </View>
@@ -109,7 +119,7 @@ function MapPlaceholder({
             <View style={styles.locationInfo}>
               <Text style={styles.locationLabel}>Your Location</Text>
               <Text style={styles.locationCoords}>
-                {currentLocation.lat.toFixed(6)}, {currentLocation.lng.toFixed(6)}
+                {formatCoord(currentLocation.lat, 6)}, {formatCoord(currentLocation.lng, 6)}
               </Text>
             </View>
           </View>
@@ -142,13 +152,30 @@ export function DeliveryMap({
   onToggleExpand,
   showRoute = true,
 }: DeliveryMapProps) {
+  const safePickup = {
+    ...pickup,
+    lat: toFiniteNumber(pickup.lat, 0),
+    lng: toFiniteNumber(pickup.lng, 0),
+  };
+  const safeDropoff = {
+    ...dropoff,
+    lat: toFiniteNumber(dropoff.lat, 0),
+    lng: toFiniteNumber(dropoff.lng, 0),
+  };
+  const safeCurrentLocation = currentLocation
+    ? {
+        lat: toFiniteNumber(currentLocation.lat, 0),
+        lng: toFiniteNumber(currentLocation.lng, 0),
+      }
+    : null;
+
   // If MapView is not available, show placeholder
   if (!MapView) {
     return (
       <MapPlaceholder
-        currentLocation={currentLocation}
-        pickup={pickup}
-        dropoff={dropoff}
+        currentLocation={safeCurrentLocation}
+        pickup={safePickup}
+        dropoff={safeDropoff}
         isExpanded={isExpanded}
         onToggleExpand={onToggleExpand}
         showRoute={showRoute}
@@ -164,14 +191,14 @@ export function DeliveryMap({
     if (!mapRef.current || !mapReady) return;
 
     const coordinates = [
-      { latitude: pickup.lat, longitude: pickup.lng },
-      { latitude: dropoff.lat, longitude: dropoff.lng },
+      { latitude: safePickup.lat, longitude: safePickup.lng },
+      { latitude: safeDropoff.lat, longitude: safeDropoff.lng },
     ];
 
-    if (currentLocation) {
+    if (safeCurrentLocation) {
       coordinates.push({
-        latitude: currentLocation.lat,
-        longitude: currentLocation.lng,
+        latitude: safeCurrentLocation.lat,
+        longitude: safeCurrentLocation.lng,
       });
     }
 
@@ -194,11 +221,11 @@ export function DeliveryMap({
 
   // Center on current location
   const centerOnCurrentLocation = () => {
-    if (!mapRef.current || !currentLocation) return;
+    if (!mapRef.current || !safeCurrentLocation) return;
 
     mapRef.current.animateToRegion({
-      latitude: currentLocation.lat,
-      longitude: currentLocation.lng,
+      latitude: safeCurrentLocation.lat,
+      longitude: safeCurrentLocation.lng,
       latitudeDelta: LATITUDE_DELTA,
       longitudeDelta: LONGITUDE_DELTA,
     });
@@ -206,10 +233,10 @@ export function DeliveryMap({
 
   // Get initial region
   const getInitialRegion = () => {
-    if (currentLocation) {
+    if (safeCurrentLocation) {
       return {
-        latitude: currentLocation.lat,
-        longitude: currentLocation.lng,
+        latitude: safeCurrentLocation.lat,
+        longitude: safeCurrentLocation.lng,
         latitudeDelta: LATITUDE_DELTA * 2,
         longitudeDelta: LONGITUDE_DELTA * 2,
       };
@@ -217,8 +244,8 @@ export function DeliveryMap({
 
     // Center between pickup and dropoff
     return {
-      latitude: (pickup.lat + dropoff.lat) / 2,
-      longitude: (pickup.lng + dropoff.lng) / 2,
+      latitude: (safePickup.lat + safeDropoff.lat) / 2,
+      longitude: (safePickup.lng + safeDropoff.lng) / 2,
       latitudeDelta: LATITUDE_DELTA * 4,
       longitudeDelta: LONGITUDE_DELTA * 4,
     };
@@ -228,16 +255,16 @@ export function DeliveryMap({
   const getRouteCoordinates = () => {
     const coordinates = [];
     
-    if (currentLocation) {
+    if (safeCurrentLocation) {
       coordinates.push({
-        latitude: currentLocation.lat,
-        longitude: currentLocation.lng,
+        latitude: safeCurrentLocation.lat,
+        longitude: safeCurrentLocation.lng,
       });
     }
     
     coordinates.push(
-      { latitude: pickup.lat, longitude: pickup.lng },
-      { latitude: dropoff.lat, longitude: dropoff.lng }
+      { latitude: safePickup.lat, longitude: safePickup.lng },
+      { latitude: safeDropoff.lat, longitude: safeDropoff.lng }
     );
 
     return coordinates;
@@ -272,7 +299,7 @@ export function DeliveryMap({
         {/* Pickup marker */}
         {Marker && (
           <Marker
-            coordinate={{ latitude: pickup.lat, longitude: pickup.lng }}
+            coordinate={{ latitude: safePickup.lat, longitude: safePickup.lng }}
             anchor={{ x: 0.5, y: 1 }}
           >
             <View style={styles.markerContainer}>
@@ -287,7 +314,7 @@ export function DeliveryMap({
         {/* Dropoff marker */}
         {Marker && (
           <Marker
-            coordinate={{ latitude: dropoff.lat, longitude: dropoff.lng }}
+            coordinate={{ latitude: safeDropoff.lat, longitude: safeDropoff.lng }}
             anchor={{ x: 0.5, y: 1 }}
           >
             <View style={styles.markerContainer}>
@@ -300,11 +327,11 @@ export function DeliveryMap({
         )}
 
         {/* Current location marker */}
-        {currentLocation && Marker && (
+        {safeCurrentLocation && Marker && (
           <Marker
             coordinate={{
-              latitude: currentLocation.lat,
-              longitude: currentLocation.lng,
+              latitude: safeCurrentLocation.lat,
+              longitude: safeCurrentLocation.lng,
             }}
             anchor={{ x: 0.5, y: 0.5 }}
           >

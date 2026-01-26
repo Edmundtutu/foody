@@ -22,6 +22,27 @@ class Order extends Model
     public const STATUS_COMPLETED = 'completed';
     public const STATUS_CANCELLED = 'cancelled';
 
+    public const STATUSES = [
+        self::STATUS_PENDING,
+        self::STATUS_CONFIRMED,
+        self::STATUS_PREPARING,
+        self::STATUS_READY,
+        self::STATUS_COMPLETED,
+        self::STATUS_CANCELLED,
+    ];
+
+    /**
+     * Valid status transitions: current => [allowed next statuses]
+     */
+    public const STATUS_TRANSITIONS = [
+        self::STATUS_PENDING => [self::STATUS_CONFIRMED, self::STATUS_CANCELLED],
+        self::STATUS_CONFIRMED => [self::STATUS_PREPARING, self::STATUS_CANCELLED],
+        self::STATUS_PREPARING => [self::STATUS_READY, self::STATUS_CANCELLED],
+        self::STATUS_READY => [self::STATUS_COMPLETED, self::STATUS_CANCELLED], // For non-delivery orders
+        self::STATUS_COMPLETED => [], // Terminal state
+        self::STATUS_CANCELLED => [], // Terminal state
+    ];
+
     // Order types (fulfillment modes)
     public const TYPE_DINE_IN = 'DINE_IN';
     public const TYPE_TAKEAWAY = 'TAKEAWAY';
@@ -117,5 +138,53 @@ class Order extends Model
     public function getDeliveryStatus(): ?string
     {
         return $this->logistics?->delivery_status;
+    }
+
+    /**
+     * Check if order can transition to a new status.
+     */
+    public function canTransitionTo(string $newStatus): bool
+    {
+        if (!in_array($newStatus, self::STATUSES, true)) {
+            return false;
+        }
+
+        // Terminal states cannot be changed
+        if ($this->status === self::STATUS_COMPLETED || $this->status === self::STATUS_CANCELLED) {
+            return false;
+        }
+
+        $allowedTransitions = self::STATUS_TRANSITIONS[$this->status] ?? [];
+        return in_array($newStatus, $allowedTransitions, true);
+    }
+
+    /**
+     * Check if order is in a terminal state (cannot be changed).
+     */
+    public function isTerminal(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED || $this->status === self::STATUS_CANCELLED;
+    }
+
+    /**
+     * Check if order can be cancelled.
+     */
+    public function canBeCancelled(): bool
+    {
+        return !$this->isTerminal() && $this->canTransitionTo(self::STATUS_CANCELLED);
+    }
+
+    /**
+     * Check if order can be manually completed (non-delivery orders only).
+     * Delivery orders are auto-completed when delivery status is DELIVERED.
+     */
+    public function canBeManuallyCompleted(): bool
+    {
+        // Only non-delivery orders at READY status can be manually completed
+        // Delivery orders are completed automatically via DispatchService::completeDelivery()
+        return !$this->isTerminal()
+            && $this->status === self::STATUS_READY
+            && $this->order_type !== self::TYPE_DELIVERY
+            && $this->canTransitionTo(self::STATUS_COMPLETED);
     }
 }

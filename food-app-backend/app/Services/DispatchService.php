@@ -113,6 +113,33 @@ class DispatchService
             );
         }
 
+        $order = $logistics->order;
+
+        // Cannot update delivery status if order is cancelled or completed
+        if ($order->isTerminal()) {
+            throw new \InvalidArgumentException(
+                "Cannot update delivery status. Order is {$order->status}."
+            );
+        }
+
+        // Additional validation: If transitioning to PICKED_UP, verify order is READY
+        if ($newStatus === OrderLogistics::STATUS_PICKED_UP) {
+            if ($order->status !== Order::STATUS_READY) {
+                throw new \InvalidArgumentException(
+                    "Order must be READY before marking as PICKED_UP. Current order status: {$order->status}"
+                );
+            }
+        }
+
+        // Validation: Cannot mark as DELIVERED if order is not READY
+        if ($newStatus === OrderLogistics::STATUS_DELIVERED) {
+            if ($order->status !== Order::STATUS_READY) {
+                throw new \InvalidArgumentException(
+                    "Order must be READY before marking delivery as DELIVERED. Current order status: {$order->status}"
+                );
+            }
+        }
+
         return DB::transaction(function () use ($logistics, $newStatus) {
             $updateData = ['delivery_status' => $newStatus];
 
@@ -133,7 +160,17 @@ class DispatchService
                 $this->completeDelivery($logistics);
             }
 
-            return $logistics->fresh(['agent', 'order']);
+            return $logistics->fresh([
+                'agent',
+                'order.user',
+                'order.restaurant',
+                'order.items.orderable' => function ($morphTo) {
+                    $morphTo->morphWith([
+                        \App\Models\Dish::class => ['options'],
+                        \App\Models\ComboSelection::class => ['items.dish', 'combo'],
+                    ]);
+                },
+            ]);
         });
     }
 
@@ -144,6 +181,27 @@ class DispatchService
     {
         $order = $logistics->order;
         $agent = $logistics->agent;
+
+        // Validate that order can be completed
+        if ($order->isTerminal()) {
+            // Order is already completed or cancelled, skip update but still decrement agent load
+            if ($agent) {
+                $agent->decrementLoad();
+            }
+            return;
+        }
+
+        // Ensure order is a delivery order
+        if ($order->order_type !== Order::TYPE_DELIVERY) {
+            throw new \InvalidArgumentException('Can only complete delivery orders via delivery completion');
+        }
+
+        // Validate order can transition to completed
+        if (!$order->canTransitionTo(Order::STATUS_COMPLETED)) {
+            throw new \InvalidArgumentException(
+                "Cannot complete order. Current status '{$order->status}' does not allow transition to completed."
+            );
+        }
 
         // Update order status to completed
         $order->update(['status' => Order::STATUS_COMPLETED]);
@@ -196,7 +254,16 @@ class DispatchService
     public function getAgentDeliveries(Agent $agent, ?string $status = null): Collection
     {
         $query = $agent->logistics()
-            ->with(['order.user', 'order.restaurant', 'order.items']);
+            ->with([
+                'order.user',
+                'order.restaurant',
+                'order.items.orderable' => function ($morphTo) {
+                    $morphTo->morphWith([
+                        \App\Models\Dish::class => ['options'],
+                        \App\Models\ComboSelection::class => ['items.dish', 'combo'],
+                    ]);
+                },
+            ]);
 
         if ($status) {
             $query->where('delivery_status', $status);
@@ -223,8 +290,20 @@ class DispatchService
      */
     public function confirmDelivery(OrderLogistics $logistics): OrderLogistics
     {
+        $order = $logistics->order;
+
+        // Cannot confirm delivery if order is cancelled or already completed
+        if ($order->isTerminal()) {
+            throw new \InvalidArgumentException(
+                "Cannot confirm delivery. Order is {$order->status}."
+            );
+        }
+
+        // Can only confirm delivery for orders that are ON_THE_WAY
         if ($logistics->delivery_status !== OrderLogistics::STATUS_ON_THE_WAY) {
-            throw new \InvalidArgumentException('Can only confirm delivery for ON_THE_WAY orders');
+            throw new \InvalidArgumentException(
+                "Can only confirm delivery for orders that are ON_THE_WAY. Current status: {$logistics->delivery_status}"
+            );
         }
 
         return $this->updateDeliveryStatus($logistics, OrderLogistics::STATUS_DELIVERED);

@@ -77,7 +77,7 @@ export interface Order {
     restaurant_id: string;
     shop_id?: string; // Legacy alias for restaurant_id
     total: number;
-    status: 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
+    status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
     notes: string | null;
     order_type: OrderType;
     delivery_address: DeliveryAddress | null;
@@ -141,7 +141,7 @@ export interface CreateOrderData {
  * Only "restaurant" role can update order status
  */
 export interface UpdateOrderStatusData {
-    status: 'pending' | 'confirmed' | 'processing' | 'ready' | 'completed' | 'cancelled';
+    status: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'completed' | 'cancelled';
 }
 
 /**

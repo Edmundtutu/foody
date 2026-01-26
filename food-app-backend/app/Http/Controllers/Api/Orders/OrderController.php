@@ -54,15 +54,20 @@ class OrderController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'status' => 'required|in:pending,confirmed,preparing,ready,completed,cancelled',
+            'status' => 'required|in:' . implode(',', \App\Models\Order::STATUSES),
         ]);
 
         $order = $this->orderService->getOrderById($id);
         $this->authorize('update', $order);
 
-        $order = $this->orderService->updateOrderStatus($id, $request->status);
-
-        return $this->success(new OrderResource($order), 'Order status updated successfully');
+        try {
+            $order = $this->orderService->updateOrderStatus($id, $request->status);
+            return $this->success(new OrderResource($order), 'Order status updated successfully');
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            return $this->error($e->getMessage(), 422, $e->errors());
+        } catch (\InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422);
+        }
     }
 
     public function destroy($id)

@@ -19,7 +19,10 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => [env('FRONTEND_URL', 'http://localhost:3000')],
+    'allowed_origins' => [
+        env('FRONTEND_URL', 'http://localhost:3000'),
+        env('TEST_URL', 'https://h-fizlw-edmundtutu-8081.exp.direct')
+    ],
 
     'allowed_origins_patterns' => [],
 

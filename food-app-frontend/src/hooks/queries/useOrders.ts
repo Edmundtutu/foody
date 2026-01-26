@@ -93,6 +93,10 @@ export function useUpdateOrderStatus() {
       if (context?.previousOrders) {
         queryClient.setQueryData(['orders'], context.previousOrders);
       }
+      
+      // Show error toast with detailed message
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update order status';
+      // Note: toast is handled in the component, but we can add it here too if needed
     },
     onSuccess: (updatedOrder) => {
       // Invalidate and refetch

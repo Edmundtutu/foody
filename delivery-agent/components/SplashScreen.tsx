@@ -6,9 +6,14 @@ import {
   Animated,
   Dimensions,
 } from 'react-native';
+import { useRouter } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Truck, Navigation } from 'lucide-react-native';
 import { useOrderStore } from '@/services/orderService';
+import { apiService } from '@/services/apiService';
 import { Colors, Typography, Spacing } from '@/constants/theme';
+
+const AUTH_TOKEN_KEY = 'auth_token';
 
 const { width } = Dimensions.get('window');
 
@@ -17,6 +22,7 @@ interface SplashScreenProps {
 }
 
 export function SplashScreen({ onComplete }: SplashScreenProps) {
+  const router = useRouter();
   const initializeRider = useOrderStore((state) => state.initializeRider);
   const loadOrders = useOrderStore((state) => state.loadOrders);
 
@@ -31,6 +37,10 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
   // Status state
   const [status, setStatus] = React.useState('Initializing...');
   const [progress, setProgress] = React.useState(0);
+  
+  // Track if initialization has started to prevent re-runs
+  const initializationStarted = useRef(false);
+  const isNavigating = useRef(false);
 
   useEffect(() => {
     // Start logo animations
@@ -85,26 +95,113 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
   }, []);
 
   useEffect(() => {
+    // Prevent multiple initializations
+    if (initializationStarted.current || isNavigating.current) {
+      return;
+    }
+    
+    initializationStarted.current = true;
+    
     const initialize = async () => {
       try {
-        // Step 1: Load rider profile
+        // Step 1: Check for authentication token
+        setStatus('Checking authentication...');
+        setProgress(10);
+        
+        await apiService.init();
+        const token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
+        console.log('[SplashScreen] Token check:', { hasToken: !!token });
+        
+        if (!token) {
+          // No token - navigate to login screen
+          setStatus('Authentication required');
+          setProgress(100);
+          await new Promise((resolve) => setTimeout(resolve, 500));
+          
+          isNavigating.current = true;
+          // Call onComplete FIRST to update RootLayout state before navigation
+          onComplete();
+          
+          Animated.parallel([
+            Animated.timing(logoOpacity, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+            Animated.timing(contentOpacity, {
+              toValue: 0,
+              duration: 300,
+              useNativeDriver: true,
+            }),
+          ]).start(() => {
+            router.replace('/(auth)/login');
+          });
+          return;
+        }
+
+        // Step 2: Load rider profile
         setStatus('Loading rider profile...');
-        setProgress(20);
-        initializeRider();
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        setProgress(30);
+        await initializeRider();
+        
+        // Check if rider initialization failed
+        const riderState = useOrderStore.getState().rider;
+        const errorState = useOrderStore.getState().error;
+        
+        if (!riderState) {
+          // If authentication error, navigate to login
+          if (errorState?.includes('Not authenticated') || errorState?.includes('401')) {
+            console.log('[SplashScreen] Auth error - redirecting to login');
+            setStatus('Session expired');
+            setProgress(100);
+            await new Promise((resolve) => setTimeout(resolve, 1000));
+            
+            // Clear invalid token
+            await apiService.clearToken();
+            
+            isNavigating.current = true;
+            // Call onComplete FIRST to update RootLayout state before navigation
+            onComplete();
+            
+            Animated.parallel([
+              Animated.timing(logoOpacity, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+              Animated.timing(contentOpacity, {
+                toValue: 0,
+                duration: 300,
+                useNativeDriver: true,
+              }),
+            ]).start(() => {
+              router.replace('/(auth)/login');
+            });
+            return;
+          }
+          
+          // Other errors - show error screen
+          console.log('[SplashScreen] Initialization failed:', errorState);
+          setStatus(errorState || 'Failed to load profile');
+          await new Promise((resolve) => setTimeout(resolve, 2000));
+          onComplete();
+          return;
+        }
+        
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
-        // Step 2: Load orders
+        // Step 3: Load orders
         setStatus('Fetching assigned orders...');
-        setProgress(50);
-        loadOrders();
-        await new Promise((resolve) => setTimeout(resolve, 600));
+        setProgress(60);
+        await loadOrders();
+        await new Promise((resolve) => setTimeout(resolve, 400));
 
-        // Step 3: Check permissions
+        // Step 4: Check permissions
         setStatus('Checking GPS permissions...');
         setProgress(80);
         await new Promise((resolve) => setTimeout(resolve, 400));
 
-        // Step 4: Ready
+        // Step 5: Ready
         setStatus('Ready to deliver!');
         setProgress(100);
         await new Promise((resolve) => setTimeout(resolve, 500));
@@ -125,13 +222,22 @@ export function SplashScreen({ onComplete }: SplashScreenProps) {
           onComplete();
         });
       } catch (error) {
+        console.error('[SplashScreen] Initialization error:', error);
         setStatus('Initialization error');
-        console.error('Splash screen error:', error);
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        onComplete();
       }
     };
 
     initialize();
-  }, []);
+    
+    // Cleanup function - only reset if we're not navigating
+    return () => {
+      if (!isNavigating.current) {
+        initializationStarted.current = false;
+      }
+    };
+  }, []); // Remove router from dependencies - it shouldn't change
 
   // Animate progress bar
   useEffect(() => {

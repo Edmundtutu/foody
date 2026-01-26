@@ -60,7 +60,7 @@ const ORDER_STATUS_CONFIG: Record<Order['status'], {
 }> = {
     pending: { label: 'Pending', color: 'text-yellow-700', bgColor: 'bg-yellow-100' },
     confirmed: { label: 'Confirmed', color: 'text-blue-700', bgColor: 'bg-blue-100' },
-    processing: { label: 'Preparing', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+    preparing: { label: 'Preparing', color: 'text-purple-700', bgColor: 'bg-purple-100' },
     ready: { label: 'Ready', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
     completed: { label: 'Completed', color: 'text-green-700', bgColor: 'bg-green-100' },
     cancelled: { label: 'Cancelled', color: 'text-red-700', bgColor: 'bg-red-100' },
@@ -126,7 +126,7 @@ const OrderProgress: React.FC<{ status: Order['status'] }> = ({ status }) => {
     const steps: { key: Order['status']; label: string }[] = [
         { key: 'pending', label: 'Pending' },
         { key: 'confirmed', label: 'Confirmed' },
-        { key: 'processing', label: 'Preparing' },
+        { key: 'preparing', label: 'Preparing' },
         { key: 'ready', label: 'Ready' },
         { key: 'completed', label: 'Completed' },
     ];
@@ -267,6 +267,34 @@ const OrderDetails: React.FC = () => {
         },
     });
 
+    // Mark as Picked Up mutation (vendor only)
+    const markAsPickedUpMutation = useMutation({
+        mutationFn: async (logisticsId: string) => {
+            return dispatchService.updateStatus(logisticsId, { status: 'PICKED_UP' });
+        },
+        onSuccess: () => {
+            toast.success('Order marked as picked up');
+            queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || 'Failed to mark as picked up');
+        },
+    });
+
+    // Customer confirms delivery receipt mutation
+    const confirmDeliveryMutation = useMutation({
+        mutationFn: async (orderId: string) => {
+            return dispatchService.confirmDelivery(orderId);
+        },
+        onSuccess: () => {
+            toast.success('Delivery confirmed');
+            queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+        },
+        onError: (err: Error) => {
+            toast.error(err.message || 'Failed to confirm delivery');
+        },
+    });
+
     // Helper: Get item name for polymorphic items (dish or combo)
     const getOrderItemName = (item: OrderItem): string => {
         if (item.type === 'combo' && item.combo_selection) {
@@ -297,11 +325,23 @@ const OrderDetails: React.FC = () => {
     };
 
     // Can assign agent: vendor + ready status + delivery order + no agent assigned
+    // Note: Status is already checked to be 'ready' (not terminal)
     const canAssignAgent =
         isVendor &&
-        order?.status === 'ready' &&
-        order?.order_type === 'DELIVERY' &&
-        !order?.logistics?.agent;
+        order &&
+        order.status === 'ready' &&
+        order.order_type === 'DELIVERY' &&
+        !order.logistics?.agent;
+
+    // Can mark as picked up: vendor + ready status + delivery order + agent assigned + logistics status is ASSIGNED
+    // Note: Status is already checked to be 'ready' (not terminal)
+    const canMarkAsPickedUp =
+        isVendor &&
+        order &&
+        order.status === 'ready' &&
+        order.order_type === 'DELIVERY' &&
+        order.logistics?.agent &&
+        order.logistics?.delivery_status === 'ASSIGNED';
 
     const handleAssignAgent = () => {
         if (!orderId || !selectedAgentId) return;
@@ -309,12 +349,25 @@ const OrderDetails: React.FC = () => {
     };
 
     const handleStatusUpdate = (newStatus: Order['status']) => {
-        if (!orderId) return;
+        if (!orderId || !order) return;
+        
+        // Validate that order is not in terminal state
+        if (order.status === 'completed' || order.status === 'cancelled') {
+            toast.error('Cannot update order status. Order is already ' + order.status + '.');
+            return;
+        }
+        
         updateOrderStatusMutation.mutate(
             { orderId, status: newStatus },
             {
                 onSuccess: () => {
-                    // Status updated successfully
+                    toast.success('Order status updated successfully');
+                },
+                onError: (err: Error) => {
+                    // Extract error message from response if available
+                    const errorMessage = err.message || 'Failed to update order status';
+                    toast.error(errorMessage);
+                    console.error('Status update error:', err);
                 },
             }
         );
@@ -474,16 +527,29 @@ const OrderDetails: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Confirm Delivery Button */}
-                        {order.logistics.delivery_status === 'DELIVERED' && order.status !== 'completed' && (
+                        {/* Confirm Delivery Button - Customer can confirm when delivery is ON_THE_WAY */}
+                        {/* Note: When delivery is DELIVERED, order is auto-completed by backend */}
+                        {order.logistics.delivery_status === 'ON_THE_WAY' && (
                             <Button
                                 className="w-full"
-                                onClick={() => handleStatusUpdate('completed')}
-                                disabled={updateOrderStatusMutation.isPending}
+                                onClick={() => {
+                                    if (orderId) {
+                                        confirmDeliveryMutation.mutate(orderId);
+                                    }
+                                }}
+                                disabled={confirmDeliveryMutation.isPending}
                             >
                                 <CheckCircle className="h-4 w-4 mr-2" />
-                                {updateOrderStatusMutation.isPending ? 'Confirming...' : 'Confirm Delivery Received'}
+                                {confirmDeliveryMutation.isPending ? 'Confirming...' : 'Confirm Delivery Received'}
                             </Button>
+                        )}
+                        
+                        {/* Show message if delivery is already delivered */}
+                        {order.logistics.delivery_status === 'DELIVERED' && (
+                            <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg">
+                                <CheckCircle className="h-5 w-5 text-green-600" />
+                                <span className="text-green-700 font-medium">Delivery completed</span>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -762,22 +828,42 @@ const OrderDetails: React.FC = () => {
                                 </>
                             )}
                             {order.status === 'confirmed' && (
-                                <Button
-                                    className="flex-1"
-                                    onClick={() => handleStatusUpdate('processing')}
-                                    disabled={updateOrderStatusMutation.isPending}
-                                >
-                                    {updateOrderStatusMutation.isPending ? 'Starting...' : 'Start Preparing'}
-                                </Button>
+                                <>
+                                    <Button
+                                        className="flex-1"
+                                        onClick={() => handleStatusUpdate('preparing')}
+                                        disabled={updateOrderStatusMutation.isPending}
+                                    >
+                                        {updateOrderStatusMutation.isPending ? 'Starting...' : 'Start Preparing'}
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1"
+                                        onClick={() => handleStatusUpdate('cancelled')}
+                                        disabled={updateOrderStatusMutation.isPending}
+                                    >
+                                        {updateOrderStatusMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+                                    </Button>
+                                </>
                             )}
-                            {order.status === 'processing' && (
-                                <Button
-                                    className="flex-1"
-                                    onClick={() => handleStatusUpdate('ready')}
-                                    disabled={updateOrderStatusMutation.isPending}
-                                >
-                                    {updateOrderStatusMutation.isPending ? 'Updating...' : 'Mark as Ready'}
-                                </Button>
+                            {order.status === 'preparing' && (
+                                <>
+                                    <Button
+                                        className="flex-1"
+                                        onClick={() => handleStatusUpdate('ready')}
+                                        disabled={updateOrderStatusMutation.isPending}
+                                    >
+                                        {updateOrderStatusMutation.isPending ? 'Updating...' : 'Mark as Ready'}
+                                    </Button>
+                                    <Button
+                                        variant="destructive"
+                                        className="flex-1"
+                                        onClick={() => handleStatusUpdate('cancelled')}
+                                        disabled={updateOrderStatusMutation.isPending}
+                                    >
+                                        {updateOrderStatusMutation.isPending ? 'Cancelling...' : 'Cancel Order'}
+                                    </Button>
+                                </>
                             )}
                             {/* Complete Order - only for non-delivery orders at ready status */}
                             {/* Delivery orders are auto-completed when delivery_status = DELIVERED */}
@@ -791,7 +877,7 @@ const OrderDetails: React.FC = () => {
                                 </Button>
                             )}
                             {/* For delivery orders at ready status, show assign agent prompt */}
-                            {order.status === 'ready' && order.order_type === 'DELIVERY' && !order.logistics?.agent && (
+                            {canAssignAgent && (
                                 <Button
                                     className="flex-1"
                                     onClick={() => setIsAssignDialogOpen(true)}
@@ -799,6 +885,26 @@ const OrderDetails: React.FC = () => {
                                 >
                                     <UserPlus className="h-4 w-4 mr-2" />
                                     Assign Delivery Agent
+                                </Button>
+                            )}
+                            {/* Mark as Picked Up - for delivery orders with assigned agent */}
+                            {canMarkAsPickedUp && (
+                                <Button
+                                    className="flex-1"
+                                    onClick={() => {
+                                        if (order.logistics?.id) {
+                                            markAsPickedUpMutation.mutate(order.logistics.id);
+                                        }
+                                    }}
+                                    disabled={markAsPickedUpMutation.isPending}
+                                    variant="default"
+                                >
+                                    {markAsPickedUpMutation.isPending ? 'Updating...' : (
+                                        <>
+                                            <Package className="h-4 w-4 mr-2" />
+                                            Mark as Picked Up
+                                        </>
+                                    )}
                                 </Button>
                             )}
                         </div>

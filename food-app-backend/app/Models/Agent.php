@@ -8,10 +8,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
 
 class Agent extends Model
 {
-    use HasFactory, HasUlids, SoftDeletes;
+    use HasFactory, HasUlids, SoftDeletes, Notifiable, HasApiTokens;
 
     public const STATUS_PENDING = 'PENDING';
     public const STATUS_ACTIVE = 'ACTIVE';
@@ -44,6 +46,10 @@ class Agent extends Model
 
     // Relationships
 
+    public function otps(): HasMany
+    {
+        return $this->hasMany(AgentOtp::class);
+    }
     public function restaurant(): BelongsTo
     {
         return $this->belongsTo(Restaurant::class);

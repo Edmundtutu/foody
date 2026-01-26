@@ -2,6 +2,9 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AgentController;
+use App\Http\Controllers\OtpAuthController;
+use App\Http\Controllers\DispatchController;
 use App\Http\Controllers\Api\Dishes\DishController;
 use App\Http\Controllers\Api\Combos\ComboController;
 use App\Http\Controllers\Api\Orders\OrderController;
@@ -25,8 +28,6 @@ use App\Http\Controllers\Api\Combos\ComboCalculationController;
 use App\Http\Controllers\Api\PostHandlers\CommentLikeController;
 use App\Http\Controllers\Api\PostHandlers\PostCommentController;
 use App\Http\Controllers\Api\MenuCategories\MenuCategoryController;
-use App\Http\Controllers\AgentController;
-use App\Http\Controllers\DispatchController;
 
 Route::prefix('v1')->group(function () {
     // Debug route for testing policies (remove in production)
@@ -68,6 +69,11 @@ Route::prefix('v1')->group(function () {
     Route::get('/combos/{combo}', [ComboController::class, 'show']);
     Route::post('/combos/{combo}/calculate', ComboCalculationController::class);
     Route::get('/restaurants/{id}/combos', [ComboController::class, 'getRestaurantCombos']);
+
+    // public Agent-Client App routes
+    Route::post('agent/request-otp', [OtpAuthController::class, 'requestOtp'])
+        ->middleware('throttle:otp-requests');
+    Route::post('agent/verify-otp', [OtpAuthController::class, 'verifyOtp']);
 
     // Authenticated endpoints
     Route::middleware(['auth:sanctum'])->group(function () {
@@ -217,14 +223,16 @@ Route::prefix('v1')->group(function () {
         Route::post('/orders/{order}/logistics/assign', [DispatchController::class, 'assignAgent']);
         Route::post('/orders/{order}/logistics/unassign', [DispatchController::class, 'unassignAgent']);
 
-        // Delivery status update (for agents)
-        Route::patch('/logistics/{logistics}/status', [DispatchController::class, 'updateStatus']);
-
         // Tracking (for customers)
         Route::get('/orders/{order}/tracking', [DispatchController::class, 'tracking']);
         Route::post('/orders/{order}/confirm-delivery', [DispatchController::class, 'confirmDelivery']);
+        
+        // Delivery status update (for agents)
+        Route::patch('/logistics/{logistics}/status', [DispatchController::class, 'updateStatus']);
 
-        // Agent's own deliveries (authenticated as agent user)
+        // Agent's own deliveries (authenticated by otp as agents)
         Route::get('/agent/deliveries', [DispatchController::class, 'agentDeliveries']);
+        Route::get('/me', [AgentController::class, 'me']);
+        Route::post('/logout', [OtpAuthController::class, 'logout']);
     });
 });

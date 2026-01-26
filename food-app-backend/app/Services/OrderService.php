@@ -8,6 +8,7 @@ use App\Models\Dish;
 use App\Models\DishOption;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\OrderLogistics;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -52,9 +53,56 @@ class OrderService
     public function updateOrderStatus(string $id, string $status)
     {
         $order = Order::findOrFail($id);
+
+        // Validate status value
+        if (!in_array($status, Order::STATUSES, true)) {
+            throw ValidationException::withMessages([
+                'status' => ['Invalid order status provided.']
+            ]);
+        }
+
+        // Prevent updating terminal states
+        if ($order->isTerminal()) {
+            throw ValidationException::withMessages([
+                'status' => ['Cannot update order status. Order is already ' . $order->status . '.']
+            ]);
+        }
+
+        // Validate status transition
+        if (!$order->canTransitionTo($status)) {
+            throw ValidationException::withMessages([
+                'status' => ["Cannot transition order from '{$order->status}' to '{$status}'."]
+            ]);
+        }
+
+        // Special validation: Delivery orders cannot be manually completed
+        // They are auto-completed when delivery status reaches DELIVERED
+        if ($status === Order::STATUS_COMPLETED && $order->order_type === Order::TYPE_DELIVERY) {
+            throw ValidationException::withMessages([
+                'status' => ['Delivery orders cannot be manually completed. They are completed automatically when delivery is finished.']
+            ]);
+        }
+
+        // Special validation: Cannot cancel order if delivery is in progress
+        if ($status === Order::STATUS_CANCELLED && $order->isDelivery() && $order->hasLogistics()) {
+            $logistics = $order->logistics;
+            $inProgressStatuses = [
+                OrderLogistics::STATUS_ASSIGNED,
+                OrderLogistics::STATUS_PICKED_UP,
+                OrderLogistics::STATUS_ON_THE_WAY,
+            ];
+            
+            if (in_array($logistics->delivery_status, $inProgressStatuses, true)) {
+                throw ValidationException::withMessages([
+                    'status' => ['Cannot cancel order. Delivery is already in progress.']
+                ]);
+            }
+        }
+
         $order->update(['status' => $status]);
 
-        $order = $order->fresh();
+        // Reload order with all necessary relations before broadcasting
+        $order = $order->fresh($this->orderRelations());
 
         // Broadcast the order status update event
         event(new OrderStatusUpdated($order));

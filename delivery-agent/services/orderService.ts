@@ -1,13 +1,11 @@
 import { create } from 'zustand';
 import { Order, OrderStatus, RiderProfile } from '@/types/delivery';
-import { MOCK_ORDERS, MOCK_RIDER_PROFILE } from '@/data/mockOrders';
 import { apiService } from './apiService';
 
 interface OrderState {
   orders: Order[];
   activeOrder: Order | null;
-  rider: RiderProfile;
-  isOnline: boolean; // Whether connected to backend API
+  rider: RiderProfile | null; // Changed to nullable - no mock fallback
   isLoading: boolean;
   error: string | null;
   lastGPSLocation: { lat: number; lng: number; ts: number } | null;
@@ -33,50 +31,53 @@ interface OrderState {
     error?: string
   ) => void;
   getOrderById: (orderId: string) => Order | undefined;
-  setOnlineMode: (online: boolean) => void;
 }
 
 export const useOrderStore = create<OrderState>((set, get) => ({
   orders: [],
   activeOrder: null,
-  rider: MOCK_RIDER_PROFILE,
-  isOnline: false, // Start in offline/mock mode
+  rider: null, // Start as null - will be set by API or show error
   isLoading: false,
   error: null,
   lastGPSLocation: null,
   lastFirebaseWrite: null,
 
   initializeRider: async () => {
-    const { isOnline } = get();
+    set({ isLoading: true, error: null });
     
-    if (isOnline) {
-      await apiService.init();
-      const result = await apiService.getAgentProfile();
-      if (result.success && result.agent) {
-        set({ rider: result.agent });
-        return;
-      }
+    await apiService.init();
+    const result = await apiService.getAgentProfile();
+    
+    if (result.success && result.agent) {
+      set({ rider: result.agent, isLoading: false });
+      return;
     }
     
-    // Fallback to mock data
-    set({ rider: MOCK_RIDER_PROFILE });
+    // NO FALLBACK - Set error state instead
+    console.log('[OrderService] Failed to load rider profile:', result.error);
+    set({ 
+      error: result.error || 'Failed to load rider profile. Check network connection.', 
+      isLoading: false,
+      rider: null // Explicitly null to indicate failure
+    });
   },
 
   loadOrders: async () => {
-    const { isOnline } = get();
-    set({ isLoading: true, error: null });
-
-    if (isOnline) {
-      const result = await apiService.getAssignedDeliveries();
-      if (result.success && result.orders) {
-        set({ orders: result.orders, isLoading: false });
-        return;
-      }
-      set({ error: result.error || 'Failed to load orders', isLoading: false });
+    set({ isLoading: true, error: null, orders: [] }); // Clear existing orders
+    
+    const result = await apiService.getAssignedDeliveries();
+    
+    if (result.success && result.orders) {
+      set({ orders: result.orders, isLoading: false });
+      return;
     }
     
-    // Fallback to mock data
-    set({ orders: MOCK_ORDERS, isLoading: false });
+    // NO FALLBACK - Set error state instead
+    set({ 
+      error: result.error || 'Failed to load delivery orders. Check API connection.', 
+      isLoading: false,
+      orders: [] // Ensure empty array on failure
+    });
   },
 
   acceptOrder: (orderId: string) => {
@@ -92,38 +93,34 @@ export const useOrderStore = create<OrderState>((set, get) => ({
   },
 
   updateOrderStatus: async (orderId: string, status: OrderStatus) => {
-    const { isOnline, orders, activeOrder } = get();
+    const { orders, activeOrder } = get();
     const order = orders.find(o => o.orderId === orderId);
     
-    if (isOnline && order?.logisticsId) {
-      set({ isLoading: true });
-      const result = await apiService.updateDeliveryStatus(order.logisticsId, status);
-      
-      if (result.success && result.order) {
-        const updated = orders.map((o) =>
-          o.orderId === orderId ? result.order! : o
-        );
-        set({ 
-          orders: updated, 
-          isLoading: false,
-          activeOrder: activeOrder?.orderId === orderId ? result.order : activeOrder
-        });
-        return;
-      }
-      
-      set({ error: result.error || 'Failed to update status', isLoading: false });
-      // Continue with local update as fallback
+    if (!order?.logisticsId) {
+      set({ error: 'Order not found or missing logistics ID' });
+      return;
     }
     
-    // Local update (mock mode or API fallback)
-    const updated = orders.map((o) =>
-      o.orderId === orderId ? { ...o, status } : o
-    );
-    set({ orders: updated });
-
-    if (activeOrder?.orderId === orderId) {
-      set({ activeOrder: { ...activeOrder, status } });
+    set({ isLoading: true, error: null });
+    const result = await apiService.updateDeliveryStatus(order.logisticsId, status);
+    
+    if (result.success && result.order) {
+      const updated = orders.map((o) =>
+        o.orderId === orderId ? result.order! : o
+      );
+      set({ 
+        orders: updated, 
+        isLoading: false,
+        activeOrder: activeOrder?.orderId === orderId ? result.order : activeOrder
+      });
+      return;
     }
+    
+    // NO FALLBACK - Set error and stop
+    set({ 
+      error: result.error || 'Failed to update delivery status. Please try again.', 
+      isLoading: false 
+    });
   },
 
   updateGPSLocation: (lat: number, lng: number) => {
@@ -150,9 +147,5 @@ export const useOrderStore = create<OrderState>((set, get) => ({
 
   getOrderById: (orderId: string) => {
     return get().orders.find((order) => order.orderId === orderId);
-  },
-  
-  setOnlineMode: (online: boolean) => {
-    set({ isOnline: online });
   },
 }));

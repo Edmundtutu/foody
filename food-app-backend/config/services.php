@@ -35,4 +35,8 @@ return [
         ],
     ],
 
+    'sms'=> [
+        'webhook_url' => env('SMS_WEBHOOK_URL'),
+    ],
+
 ];

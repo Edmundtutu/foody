@@ -7,6 +7,7 @@ use App\Models\Agent;
 use App\Models\Order;
 use App\Models\OrderLogistics;
 use App\Models\Restaurant;
+use App\Models\User;
 use App\Services\DispatchService;
 use App\Traits\ApiResponseTrait;
 use Illuminate\Http\JsonResponse;
@@ -140,15 +141,30 @@ class DispatchController extends Controller
     }
 
     /**
-     * Update delivery status (for agents).
+     * Update delivery status (for agents and vendors).
+     * 
+     * - Vendor can update any status (including marking as PICKED_UP)
+     * - Agent can only update from PICKED_UP onwards (ON_THE_WAY, DELIVERED)
      */
     public function updateStatus(Request $request, OrderLogistics $logistics): JsonResponse
     {
-        Gate::authorize('updateDeliveryStatus', $logistics);
-
+        $user = $request->user();
         $validated = $request->validate([
             'status' => 'required|string|in:ASSIGNED,PICKED_UP,ON_THE_WAY,DELIVERED',
         ]);
+
+        // Check authorization based on user type and status transition
+        if ($user instanceof Agent) {
+            // Agent can only update from PICKED_UP onwards
+            if (!Gate::forUser($user)->allows('updateDeliveryStatus', [$logistics, $validated['status']])) {
+                return $this->error('This action is unauthorized. Only vendor can mark orders as picked up.', 403);
+            }
+        } elseif ($user instanceof User) {
+            // Vendor can update any status
+            Gate::authorize('updateDeliveryStatus', [$logistics, $validated['status']]);
+        } else {
+            return $this->error('Unauthorized', 401);
+        }
 
         try {
             $logistics = $this->dispatchService->updateDeliveryStatus($logistics, $validated['status']);
@@ -209,8 +225,12 @@ class DispatchController extends Controller
      */
     public function agentDeliveries(Request $request): JsonResponse
     {
-        $user = $request->user();
-        $agent = Agent::where('user_id', $user->id)->firstOrFail();
+        // With OTP auth, $request->user() returns the Agent model directly
+        $agent = $request->user();
+        
+        if (!$agent instanceof Agent) {
+            return $this->error('Unauthorized', 401);
+        }
 
         $status = $request->query('status');
         $deliveries = $this->dispatchService->getAgentDeliveries($agent, $status);

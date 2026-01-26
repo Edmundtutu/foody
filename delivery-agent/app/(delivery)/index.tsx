@@ -23,9 +23,13 @@ export default function OrdersScreen() {
   const acceptOrder = useOrderStore((state) => state.acceptOrder);
   const setActiveOrder = useOrderStore((state) => state.setActiveOrder);
   const rider = useOrderStore((state) => state.rider);
+  const isLoading = useOrderStore((state) => state.isLoading);
+  const error = useOrderStore((state) => state.error);
+  const loadOrders = useOrderStore((state) => state.loadOrders);
   const [permissionGranted, setPermissionGranted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+
 
   useEffect(() => {
     const checkPermissions = async () => {
@@ -55,12 +59,32 @@ export default function OrdersScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
-    // Simulate refresh - in real app, would fetch from API
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    await loadOrders();
     setRefreshing(false);
   };
 
-  if (loading) {
+  // Handle null rider (authentication failed)
+  if (!rider && !isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.centerContent}>
+          <AlertTriangle size={48} color={Colors.warning[600]} />
+          <Text style={styles.errorTitle}>Authentication Error</Text>
+          <Text style={styles.errorMessage}>
+            {error || 'Failed to load rider profile. Please restart the app.'}
+          </Text>
+          <TouchableOpacity 
+            style={styles.retryButton}
+            onPress={() => router.replace('/')}
+          >
+            <Text style={styles.retryButtonText}>Go Back</Text>
+          </TouchableOpacity>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (loading || isLoading) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.centerContent}>
@@ -80,8 +104,8 @@ export default function OrdersScreen() {
             <Truck size={20} color={Colors.primary[500]} />
           </View>
           <View>
-            <Text style={styles.greeting}>Hello, {rider.name}</Text>
-            <Text style={styles.subtitle}>{rider.vehicle} • Ready to deliver</Text>
+            <Text style={styles.greeting}>Hello, {rider?.name || 'Agent'}</Text>
+            <Text style={styles.subtitle}>{rider?.vehicle || 'Ready'} • Ready to deliver</Text>
           </View>
         </View>
         <TouchableOpacity
@@ -338,5 +362,31 @@ const styles = StyleSheet.create({
     fontSize: Typography.fontSize.base,
     color: Colors.slate[500],
     fontWeight: Typography.fontWeight.medium,
+  },
+  errorTitle: {
+    fontSize: Typography.fontSize.xl,
+    fontWeight: Typography.fontWeight.bold,
+    color: Colors.slate[900],
+    marginTop: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  errorMessage: {
+    fontSize: Typography.fontSize.base,
+    color: Colors.slate[600],
+    textAlign: 'center',
+    marginBottom: Spacing.lg,
+    paddingHorizontal: Spacing.xl,
+    lineHeight: 22,
+  },
+  retryButton: {
+    backgroundColor: Colors.primary[500],
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xl,
+    borderRadius: BorderRadius.base,
+  },
+  retryButtonText: {
+    color: '#ffffff',
+    fontSize: Typography.fontSize.base,
+    fontWeight: Typography.fontWeight.semibold,
   },
 });

@@ -28,6 +28,27 @@ interface ApiAgent {
     current_load: number;
 }
 
+interface ApiOrderItem {
+    id: string;
+    type: 'dish' | 'combo';
+    quantity: number;
+    dish?: {
+        id: string;
+        name: string;
+    };
+    combo_selection?: {
+        id: string;
+        combo_id: string;
+        items?: Array<{
+            dish?: {
+                id: string;
+                name: string;
+            };
+            price: number;
+        }>;
+    };
+}
+
 interface ApiOrderLogistics {
     id: string;
     order_id: string;
@@ -35,15 +56,15 @@ interface ApiOrderLogistics {
     pickup_address: {
         street?: string;
         city?: string;
-        lat?: number;
-        lng?: number;
-    };
+        lat?: number | string;
+        lng?: number | string;
+    } | null;
     delivery_address: {
         street?: string;
         city?: string;
-        lat?: number;
-        lng?: number;
-    };
+        lat?: number | string;
+        lng?: number | string;
+    } | null;
     delivery_status: OrderStatus;
     assigned_at: string | null;
     picked_up_at: string | null;
@@ -56,24 +77,33 @@ interface ApiOrderLogistics {
         delivery_contact?: {
             name: string;
             phone: string;
-        };
-        items?: Array<{
-            dish?: { name: string };
-            quantity: number;
-        }>;
+        } | null;
+        items?: ApiOrderItem[];
         restaurant?: {
+            id: string;
             name: string;
-        };
-    };
+        } | null;
+        user?: {
+            id: string;
+            name: string;
+        } | null;
+    } | null;
 }
 
 class ApiService {
     private token: string | null = null;
 
+    private toFiniteNumber(value: unknown, fallback: number): number {
+        const n = typeof value === 'number' ? value : Number(value);
+        return Number.isFinite(n) ? n : fallback;
+    }
+
     async init(): Promise<void> {
         try {
             this.token = await AsyncStorage.getItem(AUTH_TOKEN_KEY);
-        } catch {
+            console.log('[ApiService] Token loaded:', { hasToken: !!this.token });
+        } catch (error) {
+            console.error('[ApiService] Error loading token:', error);
             this.token = null;
         }
     }
@@ -110,6 +140,18 @@ class ApiService {
                 headers,
             });
 
+            // Handle empty responses
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                if (response.ok) {
+                    return { status: 'success' as const };
+                }
+                return {
+                    status: 'error',
+                    message: `Request failed with status ${response.status}`,
+                };
+            }
+
             const data = await response.json();
 
             if (!response.ok) {
@@ -119,8 +161,19 @@ class ApiService {
                 };
             }
 
-            return data;
+            // Backend uses ApiResponseTrait which wraps in { status, message, data }
+            // Some endpoints return direct JSON, handle both cases
+            if (data.status === 'success' || data.status === 'error') {
+                return data as ApiResponse<T>;
+            }
+
+            // Direct JSON response (like /me endpoint)
+            return {
+                status: 'success',
+                data: data as T,
+            };
         } catch (error) {
+            console.error('[ApiService] Request error:', error);
             return {
                 status: 'error',
                 message: error instanceof Error ? error.message : 'Network error',
@@ -128,49 +181,133 @@ class ApiService {
         }
     }
 
-    // Auth methods
-    async login(email: string, password: string): Promise<{ success: boolean; agent?: RiderProfile; error?: string }> {
-        const response = await this.request<{ token: string; user: any }>('/login', {
-            method: 'POST',
-            body: JSON.stringify({ email, password }),
-        });
+    // Auth methods - OTP Authentication
+    async requestOtp(phoneNumber: string): Promise<{ success: boolean; error?: string }> {
+        // Backend returns { message, sms_sent } directly (not wrapped in ApiResponse)
+        const url = `${API_BASE_URL}/agent/request-otp`;
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        };
 
-        if (response.status === 'error') {
-            return { success: false, error: response.message };
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({ phone_number: phoneNumber }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data.message || `Request failed with status ${response.status}`,
+                };
+            }
+
+            return { success: true };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Network error',
+            };
         }
+    }
 
-        if (response.data?.token) {
-            await this.setToken(response.data.token);
+    async verifyOtp(
+        phoneNumber: string,
+        otpCode: string
+    ): Promise<{ success: boolean; token?: string; error?: string }> {
+        // Backend returns { message, token, agent } directly (not wrapped in ApiResponse)
+        const url = `${API_BASE_URL}/agent/verify-otp`;
+        const headers: HeadersInit = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+        };
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    phone_number: phoneNumber,
+                    otp_code: otpCode,
+                }),
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                return {
+                    success: false,
+                    error: data.message || `Request failed with status ${response.status}`,
+                };
+            }
+
+            // Backend returns { message, token, agent } directly
+            const token = data.token;
+
+            if (token) {
+                await this.setToken(token);
+                return { success: true, token };
+            }
+
+            return { success: false, error: 'No token returned' };
+        } catch (error) {
+            return {
+                success: false,
+                error: error instanceof Error ? error.message : 'Network error',
+            };
         }
-
-        // Fetch agent profile after login
-        const agentResponse = await this.getAgentProfile();
-        return agentResponse;
     }
 
     async logout(): Promise<void> {
-        await this.request('/logout', { method: 'POST' });
-        await this.clearToken();
+        try {
+            await this.request('/logout', { method: 'POST' });
+        } catch (error) {
+            // Continue even if logout fails
+            console.error('Logout error:', error);
+        } finally {
+            await this.clearToken();
+        }
     }
 
     // Agent profile
     async getAgentProfile(): Promise<{ success: boolean; agent?: RiderProfile; error?: string }> {
-        // The agent profile would typically be fetched from a dedicated endpoint
-        // For now, we'll return success if token exists
         if (!this.token) {
             return { success: false, error: 'Not authenticated' };
         }
 
-        // This would be replaced with actual API call
-        // GET /agent/profile or similar
+        // Backend returns { agent: {...} } directly (not wrapped in ApiResponse format)
+        const response = await this.request<{ agent: ApiAgent }>('/me');
+        
+        if (response.status === 'error') {
+            console.log('[ApiService] getAgentProfile error:', response.message);
+            return { success: false, error: response.message };
+        }
+        
+        // Backend returns { agent: {...} } directly, check response.data first, then response
+        const agentData = response.data?.agent || (response as any).agent;
+        
+        if (agentData) {
+            return { 
+                success: true, 
+                agent: this.mapApiAgentToRiderProfile(agentData) 
+            };
+        }
+        
+        return { success: false, error: 'No agent data returned' };
+    }
+
+    // Helper to map API agent to RiderProfile
+    private mapApiAgentToRiderProfile(apiAgent: ApiAgent): RiderProfile {
         return {
-            success: true,
-            agent: {
-                riderId: 'agent-1',
-                name: 'Delivery Agent',
-                restaurantId: 'restaurant-1',
-                vehicle: 'Motorcycle',
-            },
+            riderId: apiAgent.id,
+            name: apiAgent.name,
+            restaurantId: apiAgent.restaurant_id,
+            vehicle: apiAgent.fleet_kind || 'Unknown',
+            phone: apiAgent.phone_number,
         };
     }
 
@@ -182,7 +319,33 @@ class ApiService {
             return { success: false, error: response.message };
         }
 
-        const orders: Order[] = (response.data || []).map(this.mapLogisticsToOrder);
+        // Backend returns { status: 'success', data: [...] } format
+        const logisticsArray = response.data || [];
+        
+        if (!Array.isArray(logisticsArray)) {
+            console.log('[ApiService] getAssignedDeliveries - invalid response format');
+            return { success: false, error: 'Invalid response format' };
+        }
+
+        // Handle empty array case
+        if (logisticsArray.length === 0) {
+            console.log('[ApiService] getAssignedDeliveries - no orders assigned');
+            return { success: true, orders: [] };
+        }
+
+        // Map logistics to orders, filter out invalid ones
+        const orders: Order[] = logisticsArray
+            .filter((logistics) => {
+                // Validate required fields
+                if (!logistics.order_id || !logistics.id) {
+                    console.warn('[ApiService] Invalid logistics record:', logistics);
+                    return false;
+                }
+                return true;
+            })
+            .map((logistics) => this.mapLogisticsToOrder(logistics));
+        
+        console.log('[ApiService] getAssignedDeliveries - mapped orders:', orders.length);
         return { success: true, orders };
     }
 
@@ -190,48 +353,114 @@ class ApiService {
         logisticsId: string,
         status: OrderStatus
     ): Promise<{ success: boolean; order?: Order; error?: string }> {
+        console.log('[ApiService] updateDeliveryStatus:', { logisticsId, status });
+        
         const response = await this.request<ApiOrderLogistics>(`/logistics/${logisticsId}/status`, {
             method: 'PATCH',
             body: JSON.stringify({ status }),
         });
 
         if (response.status === 'error') {
+            console.log('[ApiService] updateDeliveryStatus error:', response.message);
             return { success: false, error: response.message };
         }
 
-        if (response.data) {
-            return { success: true, order: this.mapLogisticsToOrder(response.data) };
+        // Backend returns { status: 'success', data: {...} } format
+        const logistics = response.data;
+        
+        if (!logistics) {
+            console.log('[ApiService] updateDeliveryStatus - no data returned');
+            return { success: false, error: 'No data returned' };
         }
 
-        return { success: false, error: 'No data returned' };
+        const order = this.mapLogisticsToOrder(logistics);
+        console.log('[ApiService] updateDeliveryStatus - success');
+        return { success: true, order };
     }
 
     // Helper to map API logistics to app Order type
     private mapLogisticsToOrder(logistics: ApiOrderLogistics): Order {
+        // Handle polymorphic items (dish vs combo)
+        const items = (logistics.order?.items || [])
+            .filter((item) => item && item.quantity > 0) // Filter invalid items
+            .map((item) => {
+                let itemName = 'Item';
+                
+                if (item.type === 'dish' && item.dish?.name) {
+                    itemName = item.dish.name;
+                } else if (item.type === 'combo' && item.combo_selection) {
+                    // For combo, show combo name or list of dishes
+                    const comboItems = item.combo_selection.items || [];
+                    if (comboItems.length > 0) {
+                        const dishNames = comboItems
+                            .map((ci) => ci.dish?.name)
+                            .filter(Boolean)
+                            .join(', ');
+                        itemName = dishNames 
+                            ? `Combo (${dishNames})` 
+                            : `Combo (${comboItems.length} items)`;
+                    } else {
+                        itemName = 'Combo';
+                    }
+                } else if (item.type === 'combo') {
+                    itemName = 'Combo';
+                }
+                
+                return {
+                    name: itemName,
+                    qty: item.quantity || 1,
+                };
+            });
+
+        // Handle pickup address - prefer logistics pickup_address, fallback to restaurant location
+        const pickupAddress = logistics.pickup_address;
+        const pickupLat = this.toFiniteNumber(pickupAddress?.lat, 0);
+        const pickupLng = this.toFiniteNumber(pickupAddress?.lng, 0);
+
+        // Handle delivery address
+        const deliveryAddress = logistics.delivery_address;
+        const deliveryLat = this.toFiniteNumber(deliveryAddress?.lat, 0);
+        const deliveryLng = this.toFiniteNumber(deliveryAddress?.lng, 0);
+        const deliveryStreet = deliveryAddress?.street || 'Delivery Address';
+
+        // Handle customer info - prefer delivery_contact, fallback to user
+        const deliveryContact = logistics.order?.delivery_contact;
+        const customerName = deliveryContact?.name || 
+                            logistics.order?.user?.name || 
+                            'Customer';
+        const customerPhone = deliveryContact?.phone || '';
+
+        // Handle restaurant name
+        const restaurantName = logistics.order?.restaurant?.name || 'Restaurant';
+
+        // Validate required fields
+        if (!logistics.order_id || !logistics.id) {
+            throw new Error('Invalid logistics data: missing order_id or id');
+        }
+
         return {
             orderId: logistics.order_id,
             logisticsId: logistics.id,
             restaurantId: logistics.order?.restaurant_id || '',
             customer: {
-                name: logistics.order?.delivery_contact?.name || 'Customer',
-                phone: logistics.order?.delivery_contact?.phone || '',
+                name: customerName,
+                phone: customerPhone,
             },
             pickup: {
-                name: logistics.order?.restaurant?.name || 'Restaurant',
-                lat: logistics.pickup_address?.lat || 0,
-                lng: logistics.pickup_address?.lng || 0,
+                name: restaurantName,
+                lat: pickupLat,
+                lng: pickupLng,
             },
             dropoff: {
-                name: logistics.delivery_address?.street || 'Delivery Address',
-                lat: logistics.delivery_address?.lat || 0,
-                lng: logistics.delivery_address?.lng || 0,
+                name: deliveryStreet,
+                lat: deliveryLat,
+                lng: deliveryLng,
             },
-            items: (logistics.order?.items || []).map(item => ({
-                name: item.dish?.name || 'Item',
-                qty: item.quantity,
-            })),
+            items: items.length > 0 ? items : [{ name: 'Order items', qty: 1 }], // Fallback if no items
             status: logistics.delivery_status,
-            createdAt: new Date(logistics.assigned_at || Date.now()).getTime(),
+            createdAt: logistics.assigned_at 
+                ? new Date(logistics.assigned_at).getTime() 
+                : Date.now(),
         };
     }
 }

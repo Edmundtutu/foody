@@ -141,6 +141,16 @@ class AgentController extends Controller
     }
 
     /**
+     * Me function to return Agent logged in profile
+     */
+    public function me(Request $request): JsonResponse
+    {
+        return response()->json([
+            'agent' => $request->user(),
+        ]);
+    }
+
+    /**
      * Get available agents for assignment.
      */
     public function available(Restaurant $restaurant): JsonResponse

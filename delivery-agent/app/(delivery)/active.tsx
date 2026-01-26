@@ -50,6 +50,12 @@ export default function ActiveDeliveryScreen() {
       router.back();
       return;
     }
+    
+    // Handle null rider (authentication failed)
+    if (!rider) {
+      router.replace('/(delivery)');
+      return;
+    }
 
     const initializeTracking = async () => {
       try {
@@ -123,7 +129,7 @@ export default function ActiveDeliveryScreen() {
       const firebasePayload = {
         status: newStatus,
         updatedAt: Date.now(),
-        riderId: rider.riderId,
+        riderId: rider?.riderId || '',
       };
 
       const result = await firebaseService.pushStatusUpdate(
@@ -157,13 +163,20 @@ export default function ActiveDeliveryScreen() {
     return null;
   }
 
+  // Agent can only proceed from PICKED_UP onwards
+  // If order is ASSIGNED, agent should wait for vendor to mark as PICKED_UP
   const statusFlow: OrderStatus[] = [
-    'ASSIGNED',
     'PICKED_UP',
     'ON_THE_WAY',
     'DELIVERED',
   ];
-  const currentStatusIndex = statusFlow.indexOf(activeOrder.status);
+  
+  // Find current status index, defaulting to 0 (PICKED_UP) if status is ASSIGNED
+  let currentStatusIndex = statusFlow.indexOf(activeOrder.status);
+  if (currentStatusIndex === -1) {
+    // If status is ASSIGNED, agent hasn't picked up yet - show PICKED_UP as first step
+    currentStatusIndex = -1; // Will be handled in UI to show "waiting" state
+  }
 
   const statusConfig = {
     ASSIGNED: { label: 'Assigned', color: Colors.status.assigned },
@@ -175,7 +188,8 @@ export default function ActiveDeliveryScreen() {
   const getNextActionLabel = () => {
     switch (activeOrder.status) {
       case 'ASSIGNED':
-        return 'Mark as Picked Up';
+        // Agent cannot mark as picked up - vendor must do this
+        return 'Waiting for Pickup';
       case 'PICKED_UP':
         return 'Start Delivery';
       case 'ON_THE_WAY':
@@ -305,9 +319,43 @@ export default function ActiveDeliveryScreen() {
           <Text style={styles.sectionTitle}>Order Progress</Text>
           
           <View style={styles.timeline}>
+            {/* Show ASSIGNED status if order is still assigned (before pickup) */}
+            {activeOrder.status === 'ASSIGNED' && (
+              <View style={styles.timelineItem}>
+                <View style={styles.timelineIconContainer}>
+                  <Circle
+                    size={24}
+                    color={Colors.status.assigned}
+                    fill={Colors.status.assigned}
+                  />
+                  <View
+                    style={[
+                      styles.timelineLine,
+                      { backgroundColor: Colors.slate[200] },
+                    ]}
+                  />
+                </View>
+                <View style={styles.timelineContent}>
+                  <Text
+                    style={[
+                      styles.timelineLabel,
+                      {
+                        color: Colors.slate[900],
+                        fontWeight: '600',
+                      },
+                    ]}
+                  >
+                    Assigned (Waiting for Pickup)
+                  </Text>
+                </View>
+              </View>
+            )}
+            
             {statusFlow.map((status, idx) => {
-              const isCompleted = idx < currentStatusIndex;
-              const isCurrent = idx === currentStatusIndex;
+              // Adjust index if ASSIGNED status was shown
+              const adjustedIdx = activeOrder.status === 'ASSIGNED' ? idx + 1 : idx;
+              const isCompleted = adjustedIdx <= currentStatusIndex && currentStatusIndex >= 0;
+              const isCurrent = activeOrder.status === status;
               const config = statusConfig[status];
 
               return (
@@ -355,7 +403,8 @@ export default function ActiveDeliveryScreen() {
       </ScrollView>
 
       {/* Floating Action Button */}
-      {currentStatusIndex < statusFlow.length - 1 && (
+      {/* Only show if status is PICKED_UP or ON_THE_WAY (agent can proceed) */}
+      {activeOrder.status !== 'ASSIGNED' && currentStatusIndex < statusFlow.length - 1 && (
         <View style={styles.floatingButtonContainer}>
           <TouchableOpacity
             style={styles.floatingButton}
@@ -365,6 +414,17 @@ export default function ActiveDeliveryScreen() {
             <Text style={styles.floatingButtonText}>{getNextActionLabel()}</Text>
             <ChevronRight size={20} color="#fff" />
           </TouchableOpacity>
+        </View>
+      )}
+      
+      {/* Show waiting message if order is ASSIGNED (waiting for vendor to mark as PICKED_UP) */}
+      {activeOrder.status === 'ASSIGNED' && (
+        <View style={styles.floatingButtonContainer}>
+          <View style={[styles.floatingButton, { backgroundColor: Colors.slate[400], opacity: 0.8 }]}>
+            <Text style={styles.floatingButtonText}>
+              Waiting for restaurant to mark as picked up
+            </Text>
+          </View>
         </View>
       )}
 

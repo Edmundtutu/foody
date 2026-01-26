@@ -2,12 +2,15 @@
 
 namespace App\Events;
 
+use App\Models\ComboSelection;
+use App\Models\Dish;
 use App\Models\Order;
 use Illuminate\Broadcasting\Channel;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PresenceChannel;
 use Illuminate\Broadcasting\PrivateChannel;
 use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
@@ -22,7 +25,18 @@ class OrderStatusUpdated implements ShouldBroadcast
      */
     public function __construct(Order $order)
     {
-        $this->order = $order->load(['user', 'restaurant', 'items.dish']);
+        // Load order with polymorphic relationships properly
+        // OrderItem uses orderable (morphTo) relationship, not direct dish relationship
+        $this->order = $order->load([
+            'user',
+            'restaurant',
+            'items.orderable' => function (MorphTo $morphTo) {
+                $morphTo->morphWith([
+                    Dish::class => ['options'],
+                    ComboSelection::class => ['items.dish.options', 'combo'],
+                ]);
+            },
+        ]);
     }
 
     /**
